@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useGenerateArtMutation, useGetUserCreditsQuery } from '@/redux/services/art.service';
 import { Button } from '@/components/ui/button';
 import { Loader2, Download, Share2, RefreshCcw, Coins, Wallet } from 'lucide-react';
-import { Toaster } from 'sonner';
 import { customToast as toast } from '@/components/ui/toast';
 import { RootLayout } from '@/components/root-layout';
 import { motion } from 'framer-motion';
@@ -122,12 +121,10 @@ export default function GeneratePage() {
 
   return (
     <RootLayout>
-      <div className="min-h-screen bg-black/75 backdrop-blur-sm relative">
+      <div className="min-h-screen bg-black/75 backdrop-blur-sm relative overflow-x-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/50" />
         
         <div className="container mx-auto px-8 py-12 relative z-10">
-          <Toaster position="top-center" />
-          
           {/* Header */}
           <div className="flex justify-between items-center mb-12">
             <motion.h1 

@@ -128,7 +128,7 @@ export default function GalleryPage() {
 
   return (
     <RootLayout>
-      <div className="min-h-screen bg-black/75 backdrop-blur-sm relative">
+      <div className="min-h-screen bg-black/75 backdrop-blur-sm relative overflow-x-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/50" />
         
         <div className="container mx-auto px-8 py-12 relative z-10">

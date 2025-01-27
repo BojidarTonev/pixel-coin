@@ -196,7 +196,7 @@ export default function ChatPage() {
 
   return (
     <RootLayout>
-      <div className="min-h-screen bg-black/75 backdrop-blur-sm">
+      <div className="min-h-screen bg-black/75 backdrop-blur-sm relative overflow-x-hidden">
         <div className="container mx-auto px-4 py-8">
           <div className="flex gap-6">
             {/* Art Selection Sidebar */}
