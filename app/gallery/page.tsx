@@ -159,10 +159,10 @@ export default function GalleryPage() {
                   variant="ghost"
                   onClick={() => setViewMode('my')}
                   className={cn(
-                    'rounded-none text-xs px-6',
+                    'rounded-none text-xs px-6 transition-all duration-300',
                     viewMode === 'my' 
-                      ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30' 
-                      : 'text-gray-400 hover:text-gray-300'
+                      ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/30' 
+                      : 'text-gray-400 hover:bg-purple-500/10 hover:text-purple-300'
                   )}
                 >
                   My Creations
@@ -171,10 +171,10 @@ export default function GalleryPage() {
                   variant="ghost"
                   onClick={() => setViewMode('all')}
                   className={cn(
-                    'rounded-none text-xs px-6',
+                    'rounded-none text-xs px-6 transition-all duration-300',
                     viewMode === 'all' 
-                      ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30' 
-                      : 'text-gray-400 hover:text-gray-300'
+                      ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/30' 
+                      : 'text-gray-400 hover:bg-purple-500/10 hover:text-purple-300'
                   )}
                 >
                   All Creations
