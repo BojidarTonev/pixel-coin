@@ -2,7 +2,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Heart, MessageSquare, Share2, Download, X, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 interface ArtPiece {
   id: string;
@@ -40,10 +40,12 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
             {/* Image Section */}
             <div className="relative aspect-square">
-              <img
+              <Image
                 src={art.imageUrl}
                 alt={art.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
+                unoptimized // Since we're using external URLs
               />
             </div>
 
@@ -53,9 +55,20 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
                 {/* Header */}
                 <div>
                   <h2 className="text-xl font-medium text-gray-100 mb-2">{art.title}</h2>
-                  <div className="flex items-center gap-4 text-xs text-gray-400">
-                    <span>by {art.creator}</span>
-                    <span>{format(art.createdAt, 'MMM d, yyyy')}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-lg overflow-hidden relative">
+                      <Image
+                        src={art.imageUrl}
+                        alt={art.title}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                      <span>by {art.creator}</span>
+                      <span>{format(art.createdAt, 'MMM d, yyyy')}</span>
+                    </div>
                   </div>
                 </div>
 

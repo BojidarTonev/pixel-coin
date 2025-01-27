@@ -8,10 +8,7 @@ import { motion } from 'framer-motion';
 import { 
   Coins, 
   Wallet,
-  ChevronDown,
   Sparkles,
-  MessageSquare,
-  Palette,
   Info,
   ExternalLink,
   Loader2
@@ -32,7 +29,7 @@ import { useGetCreditsBalanceQuery, useGetTransactionsQuery, useDepositCreditsMu
 export default function CreditsPage() {
   const [depositAmount, setDepositAmount] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
-  const { connected, publicKey, disconnect } = useWallet();
+  const { connected, publicKey } = useWallet();
   const { setVisible } = useWalletModal();
   
   // Fetch credits and transactions
@@ -42,11 +39,6 @@ export default function CreditsPage() {
 
   const handleDeposit = async () => {
     if (!depositAmount || !connected) return;
-    
-    const loadingToast = toast.loading(
-      'Processing Deposit',
-      `Depositing ${depositAmount} PIXEL tokens...`
-    );
     
     setIsDepositing(true);
     try {
@@ -62,7 +54,8 @@ export default function CreditsPage() {
         `Successfully deposited ${depositAmount} PIXEL tokens`
       );
       setDepositAmount('');
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (e: unknown) {
       toast.error(
         'Deposit Failed',
         'There was an error processing your deposit. Please try again.'
@@ -302,7 +295,7 @@ export default function CreditsPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pt-2 text-sm text-gray-400">
-                  When your credits run low, simply deposit more PIXEL tokens to continue using the platform's features.
+                  When your credits run low, simply deposit more PIXEL tokens to continue using the platform&apos;s features.
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

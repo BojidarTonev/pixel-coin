@@ -9,21 +9,17 @@ import {
   Image,
   MessageSquare,
   CreditCard,
-  Menu,
-  X,
   Wallet,
-  ExternalLink,
   Map,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { customToast as toast } from '@/components/ui/toast';
 import { useAuthenticateUserMutation } from '@/redux/services/user.service';
-import { Coins } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const sidebarItems = [

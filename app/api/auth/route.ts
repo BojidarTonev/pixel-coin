@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     // Check if user exists
-    let { data: existingUser, error: fetchError } = await supabase
+    const { data: existingUser, error: fetchError } = await supabase
       .from('users')
       .select('*')
       .eq('wallet_address', wallet_address)

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { RootLayout } from '@/components/root-layout';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Heart, MessageSquare, Share2, Download, Search, Calendar, Filter, Wallet } from 'lucide-react';
+import { Share2, Download, Search, Filter, Wallet } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { customToast as toast } from '@/components/ui/toast';
@@ -29,13 +29,6 @@ interface ArtPiece {
   created_at: string;
 }
 
-const categories = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'knights', label: 'Knights & Castles' },
-  { value: 'fantasy', label: 'Medieval Fantasy' },
-  { value: 'towns', label: 'Pixel Towns' },
-];
-
 const sortOptions = [
   { value: 'recent', label: 'Most Recent' },
   { value: 'oldest', label: 'Oldest First' },
@@ -59,7 +52,6 @@ const item = {
 export default function GalleryPage() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'my' | 'all'>('my');
-  const [category, setCategory] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPiece, setSelectedPiece] = useState<ArtPiece | null>(null);

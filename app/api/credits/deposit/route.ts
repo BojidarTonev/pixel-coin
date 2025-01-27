@@ -22,8 +22,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Start a transaction to update credits and create transaction record
-    const { data: { session } } = await supabase.auth.getSession();
     const { error: transactionError } = await supabase.rpc('deposit_credits', {
       p_user_id: user.id,
       p_amount: amount,

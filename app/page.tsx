@@ -2,77 +2,9 @@
 
 import { RootLayout } from '@/components/root-layout';
 import { Button } from '@/components/ui/button';
-import { Palette, MessageSquare, Wallet, Image as ImageIcon, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-
-interface Feature {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-interface Step {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
-};
-
-const features: Feature[] = [
-  {
-    icon: <Palette className="h-12 w-12" />,
-    title: 'AI-Generated Pixel Art',
-    description: 'Transform any image into a medieval pixel masterpiece using our advanced AI technology.',
-  },
-  {
-    icon: <MessageSquare className="h-12 w-12" />,
-    title: 'Chat with Your Art',
-    description: 'Breathe life into your creations and chat with them in a unique, AI-driven medieval roleplay experience.',
-  },
-  {
-    icon: <Wallet className="h-12 w-12" />,
-    title: 'Token-Powered Access',
-    description: "Use credits backed by our project token to unlock the platform's features.",
-  }
-];
-
-const steps: Step[] = [
-  {
-    icon: <Wallet className="h-8 w-8" />,
-    title: 'Connect Wallet',
-    description: 'Securely link your crypto wallet to get started.'
-  },
-  {
-    icon: <ImageIcon className="h-8 w-8" />,
-    title: 'Generate Art',
-    description: 'Upload your image and watch it transform into pixel art.'
-  },
-  {
-    icon: <MessageSquare className="h-8 w-8" />,
-    title: 'Chat with Art',
-    description: 'Interact with your creations using AI.'
-  },
-  {
-    icon: <Palette className="h-8 w-8" />,
-    title: 'Earn & Create',
-    description: 'Use your credits to generate more art.'
-  }
-];
 
 export default function HomePage() {
   return (

@@ -12,6 +12,7 @@ import { clusterApiUrl } from '@solana/web3.js';
 import { useMemo } from 'react';
 
 // Import wallet adapter CSS
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 require('@solana/wallet-adapter-react-ui/styles.css');
 
 export function Providers({ children }: { children: React.ReactNode }) {
