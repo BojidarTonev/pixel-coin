@@ -18,6 +18,8 @@ import { Button } from './ui/button';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { customToast as toast } from '@/components/ui/toast';
+import { useAuthenticateUserMutation } from '@/redux/services/user.service';
+import { Coins } from 'lucide-react';
 
 const sidebarItems = [
   { name: 'Home', href: '/', icon: Home },
@@ -37,16 +39,80 @@ export function Sidebar({ onStateChange }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const { connected, publicKey, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
+  const [authenticateUser] = useAuthenticateUserMutation();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [previousConnectionState, setPreviousConnectionState] = useState(false);
+
+  // Check localStorage on mount and when connection state changes
+  useEffect(() => {
+    const checkWalletConnection = () => {
+      const walletAddress = window.localStorage.getItem('walletAddress');
+      setIsLoggedIn(!!walletAddress);
+    };
+
+    // Initial check
+    checkWalletConnection();
+
+    // Set up event listener for storage changes
+    window.addEventListener('storage', checkWalletConnection);
+
+    return () => {
+      window.removeEventListener('storage', checkWalletConnection);
+    };
+  }, []);
 
   // Handle wallet connection changes
   useEffect(() => {
-    if (connected && publicKey) {
-      toast.success(
-        'Wallet Connected',
-        `Connected to ${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`
-      );
-    }
-  }, [connected, publicKey]);
+    const handleConnection = async () => {
+      if (connected && publicKey) {
+        const walletAddress = publicKey.toBase58();
+        try {
+          // Store wallet address in localStorage
+          window.localStorage.setItem('walletAddress', walletAddress);
+          setIsLoggedIn(true);
+
+          // Try to authenticate user with wallet address
+          const response = await authenticateUser({ 
+            wallet_address: walletAddress 
+          }).unwrap();
+
+          // Show appropriate toast message
+          if (response.isNewUser) {
+            toast.success(
+              'Account Created',
+              `Welcome! Your account has been created and connected to ${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
+            );
+          } else if (!previousConnectionState) {
+            // Only show welcome back message when newly connected
+            toast.success(
+              'Wallet Connected',
+              `Welcome back! Connected to ${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
+            );
+          }
+        } catch (error) {
+          console.error('Authentication error:', error);
+          toast.error(
+            'Authentication Failed',
+            'Failed to authenticate with wallet. Please try again.'
+          );
+          // Remove wallet address from localStorage
+          window.localStorage.removeItem('walletAddress');
+          setIsLoggedIn(false);
+          // Disconnect wallet if authentication fails
+          await disconnect();
+        }
+      } else if (!connected && previousConnectionState) {
+        // Only show disconnection toast when actually disconnecting
+        window.localStorage.removeItem('walletAddress');
+        setIsLoggedIn(false);
+        toast.success('Wallet Disconnected');
+      }
+
+      setPreviousConnectionState(connected);
+    };
+
+    handleConnection();
+  }, [connected, publicKey, previousConnectionState, authenticateUser, disconnect]);
 
   useEffect(() => {
     onStateChange?.(isOpen);
@@ -56,22 +122,22 @@ export function Sidebar({ onStateChange }: SidebarProps) {
     setIsOpen(!isOpen);
   };
 
-  const handleWalletClick = useCallback(async () => {
-    if (connected) {
-      const loadingToastId = toast.loading('Disconnecting wallet...');
-      try {
-        await disconnect();
-        toast.success('Wallet Disconnected', 'Your wallet has been disconnected');
-      } catch (error) {
-        toast.error(
-          'Failed to disconnect',
-          'Please try again or check your wallet'
-        );
-      }
-    } else {
-      setVisible(true);
+  const handleConnectWallet = () => {
+    setVisible(true);
+  };
+
+  const handleDisconnectWallet = async () => {
+    try {
+      await disconnect();
+      window.localStorage.removeItem('walletAddress');
+      setIsLoggedIn(false);
+    } catch {
+      toast.error(
+        'Disconnection Failed',
+        'Failed to disconnect wallet. Please try again.'
+      );
     }
-  }, [connected, disconnect, setVisible]);
+  };
 
   const formatWalletAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -141,24 +207,18 @@ export function Sidebar({ onStateChange }: SidebarProps) {
             "p-4 mt-auto border-t border-gray-800",
             !isOpen && "p-2"
           )}>
-            {connected && publicKey && isOpen ? (
+            {isLoggedIn ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-gray-400">
                   <span>Connected:</span>
-                  <a
-                    href={`https://explorer.solana.com/address/${publicKey.toBase58()}?cluster=devnet`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center hover:text-purple-300 transition-colors"
-                  >
-                    {formatWalletAddress(publicKey.toBase58())}
-                    <ExternalLink className="w-3 h-3 ml-1" />
-                  </a>
+                  {publicKey && (
+                    <span className="text-purple-300">{formatWalletAddress(publicKey.toBase58())}</span>
+                  )}
                 </div>
                 <Button
                   variant="outline"
                   size="default"
-                  onClick={handleWalletClick}
+                  onClick={handleDisconnectWallet}
                   className="w-full text-xs bg-purple-500/10 hover:bg-purple-500/30 text-purple-300 hover:text-purple-100 border-purple-500/20 hover:border-purple-500/40 transition-all duration-300"
                 >
                   <Wallet className="h-3 w-3 mr-2" />
@@ -169,7 +229,7 @@ export function Sidebar({ onStateChange }: SidebarProps) {
               <Button
                 variant="outline"
                 size={isOpen ? "default" : "icon"}
-                onClick={handleWalletClick}
+                onClick={handleConnectWallet}
                 className={cn(
                   "w-full text-xs bg-purple-500/10 hover:bg-purple-500/30 text-purple-300 hover:text-purple-100 border-purple-500/20 hover:border-purple-500/40 transition-all duration-300",
                   !isOpen && "h-10 w-10 p-0"

@@ -1,25 +1,28 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useSelector } from 'react-redux';
-import { imageGenerationService } from './services/imageGeneration.service';
 import { imageSlice } from './features/imageSlice';
+import { artApi } from './services/art.service';
+import { creditsApi } from './services/credits.service';
 
 export interface RootState {
   images: ReturnType<typeof imageSlice.reducer>;
-  [imageGenerationService.reducerPath]: ReturnType<typeof imageGenerationService.reducer>;
+  [artApi.reducerPath]: ReturnType<typeof artApi.reducer>;
 }
 
 const rootReducer = combineReducers({
   // slices
   images: imageSlice.reducer,
   // services
-  [imageGenerationService.reducerPath]: imageGenerationService.reducer,
+  [artApi.reducerPath]: artApi.reducer,
+  [creditsApi.reducerPath]: creditsApi.reducer,
 });
 
 export const store = configureStore({
   reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat([
-      imageGenerationService.middleware,
+        artApi.middleware,
+        creditsApi.middleware
     ]),
 });
 
