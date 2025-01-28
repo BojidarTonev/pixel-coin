@@ -33,7 +33,7 @@ const styles = {
 function showToast({ title, message, type }: ToastProps) {
   const Icon = icons[type];
   
-  sonnerToast(
+  return sonnerToast(
     <div className="flex items-start gap-3">
       <div className={cn(
         "mt-0.5",
@@ -62,5 +62,29 @@ export const customToast = {
   error: (title: string, message?: string) => showToast({ title, message, type: 'error' }),
   loading: (title: string, message?: string) => showToast({ title, message, type: 'loading' }),
   wallet: (title: string, message?: string) => showToast({ title, message, type: 'wallet' }),
-  info: (title: string, message?: string) => showToast({ title, message, type: 'info' })
+  info: (title: string, message?: string) => showToast({ title, message, type: 'info' }),
+  promise: async <T>(
+    promise: Promise<T>,
+    {
+      loading: { title: loadingTitle, message: loadingMessage },
+      success: { title: successTitle, message: successMessage },
+      error: { title: errorTitle, message: errorMessage }
+    }: {
+      loading: { title: string; message?: string };
+      success: { title: string; message?: string };
+      error: { title: string; message?: string };
+    }
+  ) => {
+    const toastId = showToast({ title: loadingTitle, message: loadingMessage, type: 'loading' });
+    try {
+      const result = await promise;
+      sonnerToast.dismiss(toastId);
+      showToast({ title: successTitle, message: successMessage, type: 'success' });
+      return result;
+    } catch (error) {
+      sonnerToast.dismiss(toastId);
+      showToast({ title: errorTitle, message: errorMessage, type: 'error' });
+      throw error;
+    }
+  }
 }; 

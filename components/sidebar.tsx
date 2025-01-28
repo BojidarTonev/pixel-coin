@@ -12,7 +12,8 @@ import {
   Wallet,
   Map,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Tag
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
@@ -26,6 +27,7 @@ const sidebarItems = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Art Generation', href: '/generate', icon: Palette },
   { name: 'Art Gallery', href: '/gallery', icon: Image },
+  { name: 'NFT Marketplace', href: '/marketplace', icon: Tag },
   { name: 'Chat with Art', href: '/chat', icon: MessageSquare },
   { name: 'Credits', href: '/credits', icon: CreditCard },
   { name: 'Roadmap', href: '/roadmap', icon: Map },

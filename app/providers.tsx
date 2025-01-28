@@ -8,7 +8,6 @@ import {
 } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
-import { clusterApiUrl } from '@solana/web3.js';
 import { useMemo } from 'react';
 
 // Import wallet adapter CSS
@@ -16,8 +15,10 @@ import { useMemo } from 'react';
 require('@solana/wallet-adapter-react-ui/styles.css');
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Set up network and wallet
-  const endpoint = useMemo(() => clusterApiUrl('devnet'), []);
+  // Change from devnet to mainnet
+  const endpoint = useMemo(() => 
+    "https://nameless-icy-isle.solana-mainnet.quiknode.pro/d63d9168c52aeba91e307bd1ec369930e2b96999", 
+  []);
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
 
   return (

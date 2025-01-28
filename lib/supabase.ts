@@ -1,5 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Define database types
+export interface Art {
+  id: number;
+  userId: number;
+  title: string;
+  imageUrl: string;
+  createdAt: string;
+  mintedNftAddress?: string;
+  mintedTokenUri?: string;
+  isMinted: boolean;
+}
+
+export interface MarketplaceListing {
+  id: number;
+  userId: number;
+  artId: number;
+  nftAddress: string;
+  price: number;
+  status: 'active' | 'sold' | 'canceled';
+  createdAt: string;
+}
+
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
   throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL');
 }
