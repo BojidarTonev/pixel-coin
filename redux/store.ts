@@ -7,6 +7,16 @@ import { nftApi } from './services/nft.service';
 import appStateSlice from './features/app-state-slice';
 import { userApi } from './services/user.service';
 
+interface User {
+  id: number;
+  wallet_address: string;
+}
+
+export interface AppState {
+  isUserLoggedIn: boolean;
+  user: User | null;
+}
+
 export interface RootState {
   images: ReturnType<typeof imageSlice.reducer>;  
   appState: ReturnType<typeof appStateSlice.reducer>;

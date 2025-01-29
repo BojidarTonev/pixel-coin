@@ -1,8 +1,9 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { Art, MarketplaceListing } from '@/lib/supabase';
-import { Connection } from '@solana/web3.js';
+import { Connection, clusterApiUrl } from '@solana/web3.js';
 import { Metaplex, walletAdapterIdentity, WalletAdapter } from '@metaplex-foundation/js';
 import { baseQueryWithOnQueryStarted } from './api.utils';
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 
 interface MintNFTResponse {
   art: Art;
@@ -23,72 +24,101 @@ export const nftApi = createApi({
   baseQuery: baseQueryWithOnQueryStarted,
   tagTypes: ['NFT', 'Listing'],
   endpoints: (builder) => ({
-    // NFT Operations
     mintNFT: builder.mutation<MintNFTResponse, { artId: number, wallet: WalletAdapter }>({
       async queryFn({ artId, wallet }, _queryApi, _extraOptions, fetchWithBQ) {
         try {
           const result = await fetchWithBQ({
-            url: `/nft/mint/${artId}`,
-            method: 'POST'
+            url: `/nft/mint`,
+            method: 'POST',
+            body: { art_id: artId }
           });
           if (result.error) throw new Error('API request failed');
           
           const response = result.data as MintNFTResponse;
 
-          // Initialize Solana connection and Metaplex
-          const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL!);
-          const metaplex = new Metaplex(connection).use(walletAdapterIdentity(wallet));
+          const connection = new Connection(
+            clusterApiUrl(WalletAdapterNetwork.Devnet),
+            { commitment: 'confirmed' }
+          );
 
-          try {
-            // Upload metadata
-            const { uri: metadataUri } = await metaplex.nfts().uploadMetadata(response.metadata);
+          const metaplex = Metaplex.make(connection)
+            .use(walletAdapterIdentity(wallet));
 
-            // Mint NFT
-            const { nft } = await metaplex.nfts().create({
-              uri: metadataUri,
-              name: response.metadata.name,
-              sellerFeeBasisPoints: 500, // 5% royalty
+          const metadata = {
+            name: response.metadata.name.slice(0, 32),
+            description: response.metadata.description,
+            image: response.metadata.image
+          };
+
+          console.log('Creating NFT with metadata:', metadata);
+
+          // Create NFT with metadata in one step
+          const { nft } = await metaplex
+            .nfts()
+            .create({
+              name: metadata.name,
+              uri: metadata.image,
+              sellerFeeBasisPoints: 500,
+              symbol: 'PXART',
+              creators: [
+                {
+                  address: wallet.publicKey!,
+                  share: 100
+                }
+              ],
+              maxSupply: null,
+              isCollection: false,
+              uses: null
             });
 
-            // Update art record with NFT details
-            await fetchWithBQ({
-              url: `/nft/update/${artId}`,
-              method: 'POST',
-              body: {
-                minted_nft_address: nft.address.toString(),
-                minted_token_uri: metadataUri
-              }
-            });
+          console.log('created nft => ', nft);
 
-            return { data: response };
-          } catch (error: any) {
-            console.error('Mint NFT error:', error);
-            
-            // Check for insufficient funds error
-            if (error.message?.includes('insufficient funds for rent')) {
+          // Update art record with NFT details
+          const updateResult = await fetchWithBQ({
+            url: `/nft/update`,
+            method: 'POST',
+            body: {
+              art_id: artId,
+              is_minted: true,
+              minted_nft_address: nft.address.toString(),
+              minted_token_uri: metadata.image
+            }
+          });
+
+          if (updateResult.error) {
+            console.error('Failed to update art record:', updateResult.error);
+            throw new Error('Failed to update art record after minting');
+          }
+
+          return { data: response };
+        } catch (error) {
+          console.error('Mint NFT error:', error);
+
+          if (error instanceof Error) {
+            // Check for specific error types
+            if (error.message?.includes('insufficient funds')) {
               return {
                 error: {
                   status: 400,
-                  data: { 
-                    message: 'Insufficient SOL balance. Please add more SOL to your wallet to cover the minting costs.'
-                  }
+                  data: { message: 'Insufficient SOL balance. Please add more SOL to your wallet.' }
                 }
               };
             }
 
-            return {
-              error: {
-                status: 500,
-                data: { message: 'Failed to mint NFT. Please try again.' }
-              }
-            };
+            if (error.message?.includes('not found')) {
+              return {
+                error: {
+                  status: 408,
+                  data: { message: 'Transaction timeout. Please check your wallet for status.' }
+                }
+              };
+            }
           }
-        } catch (error) {
-          console.error('API error:', error);   
+
           return {
             error: {
               status: 500,
-              data: { message: 'Failed to prepare NFT metadata' }
+              data: { message: 'Failed to mint NFT. Please try again.' }
             }
           };
         }

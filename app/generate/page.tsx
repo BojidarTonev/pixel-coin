@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useGenerateArtMutation, useGetUserCreditsQuery } from '@/redux/services/art.service';
 import { Button } from '@/components/ui/button';
-import { Loader2, Download, Share2, RefreshCcw, Coins, Wallet } from 'lucide-react';
+import { Loader2, Download, Share2, RefreshCcw, Coins, Wallet, Sparkles } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RootLayout } from '@/components/root-layout';
 import { motion } from 'framer-motion';
@@ -47,8 +47,7 @@ export default function GeneratePage() {
 
     const formattedPrompt = prompt.trim();
     
-    // Check if user has enough credits
-    if (!credits || credits.credits_balance < 5) {
+    if (!credits || credits.credits_balance < GENERATION_COST) {
       toast({
         title: 'Insufficient Credits',
         description: 'You need at least 5 credits to generate art. Please deposit more credits.',
@@ -59,15 +58,20 @@ export default function GeneratePage() {
 
     toast({
       title: 'Generating Art',
-      description: 'Please wait while we create your masterpiece...',
+      description: (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Please wait while we create your masterpiece...</span>
+        </div>
+      ),
       variant: 'loading'
     });
 
     try {
       const result = await generateArt({ prompt: formattedPrompt }).unwrap();
       
-      if (!result || !result.image_url) {
-        throw new Error('Failed to generate image');
+      if (!result.image_url) {
+        throw new Error('No image URL in response');
       }
 
       setImages(prevImages => [{
@@ -81,7 +85,6 @@ export default function GeneratePage() {
         description: 'Your pixel art has been created successfully!',
         variant: 'default'
       });
-      setPrompt('');
     } catch (error: unknown) {
       const err = error as { status?: number; data?: { error?: string } };
       if (err.status === 401) {
@@ -98,6 +101,16 @@ export default function GeneratePage() {
         });
       }
     }
+  };
+
+  const handleReset = () => {
+    setPrompt('');
+    setImages(prevImages => prevImages.filter(img => img.id !== images[0].id));
+    toast({
+      title: 'Reset Complete',
+      description: 'Ready for a new generation!',
+      variant: 'default'
+    });
   };
 
   return (
@@ -249,37 +262,56 @@ export default function GeneratePage() {
                             unoptimized
                           />
                         </div>
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-4">
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            onClick={() => window.open(image.url, '_blank')}
-                            className="bg-gray-900/50 hover:bg-gray-900/70"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            onClick={() => {
-                              navigator.share({
-                                title: 'Generated Image',
-                                text: image.prompt,
-                                url: image.url,
-                              }).catch(console.error);
-                            }}
-                            className="bg-gray-900/50 hover:bg-gray-900/70"
-                          >
-                            <Share2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            onClick={handleGenerate}
-                            className="bg-gray-900/50 hover:bg-gray-900/70"
-                          >
-                            <RefreshCcw className="h-4 w-4" />
-                          </Button>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-3">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => window.open(image.url, '_blank')}
+                              className="h-8 w-8 bg-gray-900/50 hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 border border-gray-800 hover:border-purple-500/30"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                navigator.share({
+                                  title: 'Generated Image',
+                                  text: image.prompt,
+                                  url: image.url,
+                                }).catch(console.error);
+                              }}
+                              className="h-8 w-8 bg-gray-900/50 hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 border border-gray-800 hover:border-purple-500/30"
+                            >
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={handleReset}
+                              className="h-8 w-8 bg-gray-900/50 hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 border border-gray-800 hover:border-purple-500/30"
+                            >
+                              <RefreshCcw className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="absolute bottom-40 left-0 right-0 flex justify-center">
+                            <Button
+                              variant="secondary"
+                              onClick={() => {
+                                toast({
+                                  title: 'Preparing NFT',
+                                  description: 'Starting the minting process...',
+                                  variant: 'loading'
+                                });
+                                // TODO: Add NFT minting logic
+                              }}
+                              className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
+                            >
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Mint as NFT
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}

@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { RootLayout } from '@/components/root-layout';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Search, Filter, Wallet, Tag, Sparkles } from 'lucide-react';
+import { Filter, Wallet, Tag, Sparkles, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -14,9 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format } from 'date-fns';
-import { useGetListingsQuery, usePurchaseListingMutation } from '@/redux/services/nft.service';
+import { useGetListingsQuery, useGetUserListingsQuery, usePurchaseListingMutation } from '@/redux/services/nft.service';
+import { useGetUserArtQuery } from '@/redux/services/art.service';
 import Image from 'next/image';
 import { useAppSelector } from '@/redux/store';
+import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 const sortOptions = [
   { value: 'recent', label: 'Most Recent' },
@@ -24,27 +28,31 @@ const sortOptions = [
   { value: 'price-high', label: 'Price: High to Low' },
 ];
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
 const item = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0 }
 };
 
 export default function MarketplacePage() {
+  const [viewMode, setViewMode] = useState<'my' | 'all'>('all');
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: listings = [], isLoading } = useGetListingsQuery();
+  const [isAddListingOpen, setIsAddListingOpen] = useState(false);
+  const { data: allListings = [], isLoading: isLoadingAll } = useGetListingsQuery();
+  const { data: userListings = [], isLoading: isLoadingUser } = useGetUserListingsQuery();
+  const { data: userArt = [] } = useGetUserArtQuery();
   const [purchaseListing] = usePurchaseListingMutation();
-  const { isUserLoggedIn } = useAppSelector(state => state.appState)
+  const { isUserLoggedIn } = useAppSelector(state => state.appState);
+  const router = useRouter();
+
+  // Get mintable art (minted but not listed)
+  const listableArt = userArt.filter(art => 
+    art.is_minted && !allListings.some(listing => listing.art_id === art.id)
+  );
+
+  // Get the appropriate listings based on view mode
+  const listings = viewMode === 'my' ? userListings : allListings;
+  const isLoading = viewMode === 'my' ? isLoadingUser : isLoadingAll;
 
   // Filter and sort listings
   const filteredListings = listings
@@ -114,15 +122,40 @@ export default function MarketplacePage() {
             className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6 mb-12"
           >
             <div className="flex flex-col md:flex-row gap-6">
+              {/* View Mode Toggle */}
+              <div className="flex rounded-lg overflow-hidden border border-gray-800">
+                <button
+                  onClick={() => setViewMode('all')}
+                  className={cn(
+                    "px-4 py-2 text-xs transition-colors",
+                    viewMode === 'all'
+                      ? "bg-purple-500/20 text-purple-300"
+                      : "text-gray-400 hover:text-gray-300"
+                  )}
+                >
+                  All Listings
+                </button>
+                <button
+                  onClick={() => setViewMode('my')}
+                  className={cn(
+                    "px-4 py-2 text-xs transition-colors",
+                    viewMode === 'my'
+                      ? "bg-purple-500/20 text-purple-300"
+                      : "text-gray-400 hover:text-gray-300"
+                  )}
+                >
+                  My Listings
+                </button>
+              </div>
+
               {/* Search */}
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <div className="flex-1">
                 <input
                   type="text"
-                  placeholder="Search by title..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-xs bg-gray-900/50 border border-gray-800 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/30"
+                  placeholder="Search listings..."
+                  className="w-full px-4 py-2 text-xs bg-gray-900/50 border border-gray-800 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/30"
                 />
               </div>
 
@@ -147,39 +180,40 @@ export default function MarketplacePage() {
           </motion.div>
 
           {/* Listings Grid */}
-          <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {isLoading ? (
-              <motion.div 
-                variants={item}
-                className="col-span-full text-center py-24"
-              >
+              <div className="col-span-full text-center py-24">
                 <div className="animate-spin w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full mx-auto mb-4" />
                 <p className="text-gray-400">Loading listings...</p>
-              </motion.div>
+              </div>
             ) : !isUserLoggedIn ? (
-              <motion.div
-                variants={item}
-                className="col-span-full text-center py-24"
-              >
+              <div className="col-span-full text-center py-24">
                 <Wallet className="w-12 h-12 text-purple-400 mx-auto mb-6" />
                 <h2 className="text-xl font-medium text-gray-200 mb-3">Connect Your Wallet</h2>
                 <p className="text-sm text-gray-400 mb-6">
                   Connect your wallet to start buying and selling NFTs
                 </p>
-              </motion.div>
+              </div>
+            ) : viewMode === 'my' && filteredListings.length === 0 ? (
+              <div className="col-span-full text-center py-24">
+                <Plus className="w-12 h-12 text-purple-400 mx-auto mb-6" />
+                <h2 className="text-xl font-medium text-gray-200 mb-3">No Listings Found</h2>
+                <p className="text-sm text-gray-400 mb-6">
+                  You haven&apos;t listed any NFTs for sale yet
+                </p>
+                <Button
+                  onClick={() => setIsAddListingOpen(true)}
+                  className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Listing
+                </Button>
+              </div>
             ) : filteredListings.length === 0 ? (
-              <motion.div 
-                variants={item}
-                className="col-span-full text-center py-24"
-              >
+              <div className="col-span-full text-center py-24">
                 <Filter className="w-12 h-12 text-gray-500 mx-auto mb-4" />
                 <p className="text-gray-400">No listings found</p>
-              </motion.div>
+              </div>
             ) : (
               filteredListings.map((listing) => (
                 <motion.div
@@ -226,9 +260,80 @@ export default function MarketplacePage() {
                 </motion.div>
               ))
             )}
-          </motion.div>
+          </div>
         </div>
       </div>
+
+      {/* Add Listing Modal */}
+      <Dialog open={isAddListingOpen} onOpenChange={setIsAddListingOpen}>
+        <DialogContent className="bg-gray-900/95 border-gray-800 p-6 max-w-2xl">
+          <h2 className="text-lg font-medium text-gray-100 mb-4">Add New Listing</h2>
+          {listableArt.length === 0 ? (
+            <div className="text-center py-12">
+              <Sparkles className="w-12 h-12 text-purple-400 mx-auto mb-6" />
+              <h3 className="text-lg font-medium text-gray-200 mb-3">No NFTs Available to List</h3>
+              <p className="text-sm text-gray-400 mb-6">
+                To list artwork in the marketplace, you need to first:
+              </p>
+              <ol className="text-sm text-gray-400 space-y-2 mb-8 max-w-md mx-auto text-left list-decimal pl-4">
+                <li>Create pixel art in the Generate section</li>
+                <li>Mint your created artwork as NFTs</li>
+                <li>Once minted, you can list them here for sale</li>
+              </ol>
+              <Button
+                onClick={() => {
+                  setIsAddListingOpen(false);
+                  router.push('/generate');
+                }}
+                className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Art
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <p className="text-sm text-gray-400">
+                Select an NFT to list in the marketplace:
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                {listableArt.map((art) => (
+                  <div
+                    key={art.id}
+                    className="group relative rounded-lg overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer"
+                    onClick={() => {
+                      // TODO: Add listing logic
+                      toast({
+                        title: 'Coming Soon',
+                        description: 'Listing functionality will be available soon!',
+                        variant: 'default'
+                      });
+                    }}
+                  >
+                    <div className="relative aspect-square">
+                      <Image
+                        src={art.image_url}
+                        alt={art.title}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <p className="text-sm font-medium text-gray-100 truncate">{art.title}</p>
+                        <p className="text-xs text-gray-400">
+                          {format(new Date(art.created_at), 'MMM d, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </RootLayout>
   );
 } 

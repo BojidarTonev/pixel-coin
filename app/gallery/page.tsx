@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { RootLayout } from '@/components/root-layout';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Share2, Download, Search, Filter, Wallet } from 'lucide-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { Download, Search, Filter, Wallet, MessageSquare, Sparkles } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -20,13 +19,16 @@ import { useGetAllArtQuery, useGetUserArtQuery } from '@/redux/services/art.serv
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAppSelector } from '@/redux/store';
+import { toast } from '@/hooks/use-toast';
 
-interface ArtPiece {
+export interface ArtPiece {
   id: number;
   title: string;
   image_url: string;
   user_id: number;
   created_at: string;
+  is_minted: boolean;
+  creator_wallet: string;
 }
 
 const sortOptions = [
@@ -55,7 +57,8 @@ export default function GalleryPage() {
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPiece, setSelectedPiece] = useState<ArtPiece | null>(null);
-  const { isUserLoggedIn } = useAppSelector(state => state.appState);
+  const { isUserLoggedIn, user } = useAppSelector(state => state.appState);
+  const currentUserId = user?.id as number | undefined;
 
   // Fetch data based on view mode
   const { data: allArt = [], isLoading: isLoadingAll } = useGetAllArtQuery();
@@ -79,6 +82,10 @@ export default function GalleryPage() {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
     });
+
+  const handleArtSelect = (art: ArtPiece) => {
+    setSelectedPiece(art);
+  };
 
   return (
     <RootLayout>
@@ -214,7 +221,7 @@ export default function GalleryPage() {
                   key={piece.id}
                   variants={item}
                   className="group relative rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer"
-                  onClick={() => setSelectedPiece(piece)}
+                  onClick={() => handleArtSelect(piece)}
                 >
                   <div className="relative aspect-square">
                     <Image
@@ -225,41 +232,65 @@ export default function GalleryPage() {
                       unoptimized
                     />
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-sm font-medium text-gray-100 mb-2">{piece.title}</h3>
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-gray-300">
-                          {format(new Date(piece.created_at), 'MMM d, yyyy')}
-                        </div>
-                        <div className="flex items-center gap-2">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    {currentUserId && piece.user_id === currentUserId && (
+                      <>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-3">
                           <Button
-                            variant="secondary"
+                            variant="ghost"
                             size="icon"
-                            className="h-7 w-7 bg-gray-900/50 hover:bg-gray-900/70"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigator.share({
-                                title: piece.title,
-                                text: `Check out this pixel art: ${piece.title}`,
-                                url: piece.image_url,
-                              }).catch(console.error);
-                            }}
-                          >
-                            <Share2 className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="icon"
-                            className="h-7 w-7 bg-gray-900/50 hover:bg-gray-900/70"
                             onClick={(e) => {
                               e.stopPropagation();
                               window.open(piece.image_url, '_blank');
                             }}
+                            className="h-8 w-8 bg-gray-900/50 hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 border border-gray-800 hover:border-purple-500/30"
                           >
-                            <Download className="h-3 w-3" />
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push('/chat');
+                            }}
+                            className="h-8 w-8 bg-gray-900/50 hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 border border-gray-800 hover:border-purple-500/30"
+                          >
+                            <MessageSquare className="h-4 w-4" />
                           </Button>
                         </div>
+                        <div className="absolute bottom-20 left-0 right-0 flex justify-center">
+                          <Button
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast({
+                                title: 'Preparing NFT',
+                                description: 'Starting the minting process...',
+                                variant: 'loading'
+                              });
+                              // TODO: Add NFT minting logic
+                            }}
+                            className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
+                          >
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Mint as NFT
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 p-2">
+                      <p className="text-xs font-medium text-gray-100 truncate">{piece.title}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-400">
+                          {format(new Date(piece.created_at), 'MMM d, yyyy')}
+                        </p>
+                        <p className="text-xs text-purple-300/80">
+                          {piece.creator_wallet ? 
+                            `${piece.creator_wallet.slice(0, 4)}...${piece.creator_wallet.slice(-4)}` : 
+                            'No wallet linked'
+                          }
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -271,16 +302,7 @@ export default function GalleryPage() {
 
         {/* Art Details Modal */}
         <ArtDetailsModal
-          art={selectedPiece ? {
-            id: selectedPiece.id.toString(),
-            title: selectedPiece.title,
-            imageUrl: selectedPiece.image_url,
-            creator: `User ${selectedPiece.user_id}`,
-            createdAt: new Date(selectedPiece.created_at),
-            likes: 0,
-            comments: 0,
-            category: 'pixel-art'
-          } : null}
+          art={selectedPiece}
           onClose={() => setSelectedPiece(null)}
         />
       </div>

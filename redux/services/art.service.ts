@@ -32,48 +32,24 @@ export const artApi = createApi({
         body,
       }),
       invalidatesTags: ['Credits'],
-      transformErrorResponse: (response: ErrorResponse) => {
-        if (response.status === 401) {
-          return { status: 401, data: { message: 'Authentication required' } };
-        }
-        return response;
-      }
     }),
     getAllArt: builder.query<Art[], void>({
       query: () => ({
         url: '/art',
         method: 'GET'
-      }),
-      transformErrorResponse: (response: ErrorResponse) => {
-        if (response.status === 401) {
-          return { status: 401, data: { message: 'Authentication required' } };
-        }
-        return response;
-      }
+      })
     }),
     getUserArt: builder.query<Art[], void>({
       query: () => ({
         url: '/art/user',
         method: 'GET'
       }),
-      transformErrorResponse: (response: ErrorResponse) => {
-        if (response.status === 401) {
-          return { status: 401, data: { message: 'Authentication required' } };
-        }
-        return response;
-      }
     }),
     deleteArt: builder.mutation<void, number>({
       query: (id) => ({
         url: `/art/${id}`,
         method: 'DELETE'
       }),
-      transformErrorResponse: (response: ErrorResponse) => {
-        if (response.status === 401) {
-          return { status: 401, data: { message: 'Authentication required' } };
-        }
-        return response;
-      }
     }),
     getUserCredits: builder.query<Credits, void>({
       query: () => ({
@@ -81,12 +57,6 @@ export const artApi = createApi({
         method: 'GET'
       }),
       providesTags: ['Credits'],
-      transformErrorResponse: (response: ErrorResponse) => {
-        if (response.status === 401) {
-          return { status: 401, data: { message: 'Authentication required' } };
-        }
-        return response;
-      }
     })
   })
 });

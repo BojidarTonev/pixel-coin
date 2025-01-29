@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
     if (updateError) throw updateError;
 
-    return NextResponse.json({ art });
+    return NextResponse.json(art);
   } catch (error) {
     console.error('Generation error:', error);
     return NextResponse.json(
