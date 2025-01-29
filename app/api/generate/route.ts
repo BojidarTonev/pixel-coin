@@ -71,10 +71,10 @@ export async function POST(request: Request) {
 
     // Generate image using Replicate
     const output = await replicate.run(MODEL_VERSION, {
-      input: {
+        input: {
         prompt,
-        width: 768,
-        height: 768,
+          width: 768,
+          height: 768,
         refine: "expert_ensemble_refiner",
         scheduler: "K_EULER",
         lora_scale: 0.6,
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
         negative_prompt: "",
         prompt_strength: 0.8,
         num_inference_steps: 50
-      }
+        }
     });
 
     if (!output || !Array.isArray(output)) {
@@ -104,6 +104,7 @@ export async function POST(request: Request) {
         user_id: user.id,
         title: prompt,
         image_url: storedImageUrl,
+        creator_wallet: user.wallet_address
       }])
       .select()
       .single();

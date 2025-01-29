@@ -1,19 +1,16 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithOnQueryStarted } from './api.utils';
 
-interface ErrorResponse {
-  status: number;
-  data: {
-    message: string;
-  };
-}
-
 interface Art {
   id: number;
   title: string;
   image_url: string;
   created_at: string;
   user_id: number;
+  is_minted: boolean;
+  minted_nft_address?: string;
+  minted_token_uri?: string;
+  creator_wallet: string;
 }
 
 interface Credits {

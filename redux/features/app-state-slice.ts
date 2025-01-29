@@ -1,51 +1,36 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export interface IAlert {
-  isOpen: boolean;
-  text: string;
-  title: string;
+interface User {
+  id: number;
+  wallet_address: string;
+  created_at: string;
 }
 
-export interface IAppState {
+export interface AppState {
   isUserLoggedIn: boolean;
-  user: object | null;
-  alert: IAlert
+  user: User | null;
 }
 
-const initialState: IAppState = {
+const initialState: AppState = {
   isUserLoggedIn: false,
   user: null,
-  alert: {
-    isOpen: false,
-    text: '',
-    title: ''
-  }
 };
 
-export const imageSlice = createSlice({
+export const appStateSlice = createSlice({
   name: 'appState',
   initialState,
   reducers: {
-    setUserLoggedIn: (state, action: PayloadAction<object | null>) => {
+    setUserLoggedIn(state, action: PayloadAction<User>) {
       state.isUserLoggedIn = true;
       state.user = action.payload;
     },
-    setUserLoggedOut: (state) => {
+    setUserLoggedOut(state) {
       state.isUserLoggedIn = false;
       state.user = null;
     },
-    openAlert: (state, action: PayloadAction<IAlert>) => {
-      const { isOpen, text, title } = action.payload;
-      state.alert.isOpen = isOpen;
-      state.alert.text = text;
-      state.alert.title = title;
-    },
-    closeAlert: (state) => {
-      state.alert = initialState.alert;
-    }
   },
 });
 
-export const { setUserLoggedIn, setUserLoggedOut, openAlert, closeAlert } = imageSlice.actions;
+export const { setUserLoggedIn, setUserLoggedOut } = appStateSlice.actions;
 
-export default imageSlice; 
+export default appStateSlice.reducer; 

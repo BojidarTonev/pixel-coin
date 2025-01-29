@@ -44,7 +44,7 @@ export default function GeneratePage() {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
-
+    
     const formattedPrompt = prompt.trim();
     
     if (!credits || credits.credits_balance < GENERATION_COST) {

@@ -73,8 +73,6 @@ export async function POST(req: Request) {
       ]
     };
 
-    console.log('metadata', metadata)
-
     // Return the art and metadata for client-side minting
     return NextResponse.json({
       art,

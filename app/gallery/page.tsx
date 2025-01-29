@@ -15,10 +15,10 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ArtDetailsModal } from '@/components/art-details-modal';
-import { useGetAllArtQuery, useGetUserArtQuery } from '@/redux/services/art.service';
+import { useGetAllArtQuery } from '@/redux/services/art.service';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useAppSelector } from '@/redux/store';
+import { useAppSelector, type RootState } from '@/redux/store';
 import { toast } from '@/hooks/use-toast';
 
 export interface ArtPiece {
@@ -28,7 +28,9 @@ export interface ArtPiece {
   user_id: number;
   created_at: string;
   is_minted: boolean;
-  creator_wallet: string;
+  minted_nft_address?: string;
+  minted_token_uri?: string;
+  creator_wallet?: string;
 }
 
 const sortOptions = [
@@ -57,15 +59,19 @@ export default function GalleryPage() {
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPiece, setSelectedPiece] = useState<ArtPiece | null>(null);
-  const { isUserLoggedIn, user } = useAppSelector(state => state.appState);
-  const currentUserId = user?.id as number | undefined;
+  
+  const appState = useAppSelector((state: RootState) => state.appState);
+  const isUserLoggedIn = appState.isUserLoggedIn;
+  const user = appState.user;
+  const currentUserId = user?.id;
 
   // Fetch data based on view mode
   const { data: allArt = [], isLoading: isLoadingAll } = useGetAllArtQuery();
-  const { data: userArt = [], isLoading: isLoadingUser } = useGetUserArtQuery();
 
   // Get the appropriate art pieces based on view mode
-  const artPieces = viewMode === 'my' ? userArt : allArt;
+  const artPieces = viewMode === 'my' && currentUserId 
+    ? allArt.filter(piece => piece.user_id === currentUserId)
+    : allArt;
 
   // Apply filters and sorting
   const filteredArt = artPieces
@@ -82,6 +88,8 @@ export default function GalleryPage() {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
     });
+
+    console.log('asd => ',filteredArt);
 
   const handleArtSelect = (art: ArtPiece) => {
     setSelectedPiece(art);
@@ -181,7 +189,7 @@ export default function GalleryPage() {
             animate="show"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
           >
-            {isLoadingAll || isLoadingUser ? (
+            {isLoadingAll ? (
               <motion.div 
                 variants={item}
                 className="col-span-full text-center py-24"
@@ -231,6 +239,12 @@ export default function GalleryPage() {
                       className="object-cover"
                       unoptimized
                     />
+                    {piece.is_minted && (
+                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-purple-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-purple-500/30">
+                        <Sparkles className="h-3 w-3 text-purple-300" />
+                        <span className="text-[10px] text-purple-300">NFT</span>
+                      </div>
+                    )}
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     {currentUserId && piece.user_id === currentUserId && (
@@ -259,24 +273,26 @@ export default function GalleryPage() {
                             <MessageSquare className="h-4 w-4" />
                           </Button>
                         </div>
-                        <div className="absolute bottom-20 left-0 right-0 flex justify-center">
-                          <Button
-                            variant="secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toast({
-                                title: 'Preparing NFT',
-                                description: 'Starting the minting process...',
-                                variant: 'loading'
-                              });
-                              // TODO: Add NFT minting logic
-                            }}
-                            className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
-                          >
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Mint as NFT
-                          </Button>
-                        </div>
+                        {!piece.is_minted && (
+                          <div className="absolute bottom-12 left-0 right-0 flex justify-center">
+                            <Button
+                              variant="secondary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toast({
+                                  title: 'Preparing NFT',
+                                  description: 'Starting the minting process...',
+                                  variant: 'loading'
+                                });
+                                // TODO: Add NFT minting logic
+                              }}
+                              className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
+                            >
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Mint as NFT
+                            </Button>
+                          </div>
+                        )}
                       </>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 p-2">

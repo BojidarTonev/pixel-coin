@@ -4,7 +4,7 @@ import { imageSlice } from './features/image-slice';
 import { artApi } from './services/art.service';
 import { creditsApi } from './services/credits.service';
 import { nftApi } from './services/nft.service';
-import appStateSlice from './features/app-state-slice';
+import { appStateSlice } from './features/app-state-slice';
 import { userApi } from './services/user.service';
 
 interface User {

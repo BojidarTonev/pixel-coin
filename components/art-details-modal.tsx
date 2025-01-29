@@ -1,6 +1,6 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Share2, MessageSquare, Sparkles, Loader2 } from "lucide-react";
+import { Download, Share2, MessageSquare, Sparkles, Loader2, ShoppingBag } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ import { ArtPiece } from "@/app/gallery/page";
 import { useMintNFTMutation } from "@/redux/services/nft.service";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useState } from "react";
+import { useGetListingsQuery } from "@/redux/services/nft.service";
 
 interface ArtDetailsModalProps {
   art: ArtPiece | null;
@@ -24,6 +25,10 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
   const [isMinting, setIsMinting] = useState(false);
   const [mintNFT] = useMintNFTMutation();
   const wallet = useWallet();
+  
+  // Get listings to check if this NFT is already listed
+  const { data: listings = [] } = useGetListingsQuery();
+  const isListed = art?.is_minted && listings.some(listing => listing.nftAddress === art.minted_nft_address);
 
   if (!art) return null;
 
@@ -92,6 +97,17 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
     }
   };
 
+  const handleListForSale = () => {
+    router.push(`/marketplace/list/${art?.id}`);
+  };
+
+  const handleViewListing = () => {
+    const listing = listings.find(l => l.nftAddress === art?.minted_nft_address);
+    if (listing) {
+      router.push(`/marketplace/${listing.id}`);
+    }
+  };
+
   return (
     <Dialog open={!!art} onOpenChange={() => onClose()}>
       <DialogContent className="bg-gray-900/95 border-gray-800 p-0 max-w-2xl">
@@ -103,6 +119,12 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
             className="object-cover"
             unoptimized
           />
+          {art.is_minted && (
+            <div className="absolute top-4 right-4 flex items-center gap-1 bg-purple-500/20 px-3 py-1.5 rounded-full backdrop-blur-sm border border-purple-500/30">
+              <Sparkles className="h-4 w-4 text-purple-300" />
+              <span className="text-sm text-purple-300">NFT</span>
+            </div>
+          )}
         </div>
         <div className="p-6">
           <h2 className="text-lg font-medium text-gray-100 mb-2">{art.title}</h2>
@@ -125,6 +147,19 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
                 <span className="text-xs text-gray-500">No wallet linked</span>
               )}
             </div>
+            {art.is_minted && art.minted_nft_address && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">NFT Address:</span>
+                <a
+                  href={`https://explorer.solana.com/address/${art.minted_nft_address}?cluster=devnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-purple-300 hover:text-purple-200 transition-colors"
+                >
+                  {art.minted_nft_address.slice(0, 4)}...{art.minted_nft_address.slice(-4)}
+                </a>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -162,7 +197,29 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
                   Chat with Art
                 </Button>
 
-                {!art.is_minted && (
+                {art.is_minted ? (
+                  isListed ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleViewListing}
+                      className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
+                    >
+                      <ShoppingBag className="h-4 w-4 mr-2" />
+                      View Listing
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleListForSale}
+                      className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
+                    >
+                      <ShoppingBag className="h-4 w-4 mr-2" />
+                      List for Sale
+                    </Button>
+                  )
+                ) : (
                   <Button
                     variant="secondary"
                     size="sm"
