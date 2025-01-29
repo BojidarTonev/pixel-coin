@@ -8,9 +8,9 @@ import { Send, ChevronLeft, ChevronRight, Loader2, ChevronDown, ChevronUp, Coins
 import { cn } from '@/lib/utils';
 import { useGetUserArtQuery, useGetUserCreditsQuery } from '@/redux/services/art.service';
 import { format } from 'date-fns';
-import { customToast as toast } from '@/components/ui/toast';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { toast } from '@/hooks/use-toast';
+import { useAppSelector } from '@/redux/store';
+import Image from 'next/image';
 
 // Cost constants
 const MESSAGE_COST = 1; // credits per message
@@ -42,52 +42,15 @@ export default function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [previousConnectionState, setPreviousConnectionState] = useState(false);
-  const { connected, publicKey } = useWallet();
-  const { setVisible } = useWalletModal();
-
-  // Check wallet connection status and show toasts
-  useEffect(() => {
-    const checkWalletConnection = () => {
-      const walletAddress = window.localStorage.getItem('walletAddress');
-      const isCurrentlyLoggedIn = !!walletAddress;
-      setIsLoggedIn(isCurrentlyLoggedIn);
-
-      // Show toast only when connection state changes
-      if (isCurrentlyLoggedIn && !previousConnectionState) {
-        toast.success(
-          'Wallet Connected',
-          `Connected to ${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
-        );
-      } else if (!isCurrentlyLoggedIn && previousConnectionState) {
-        toast.success('Wallet Disconnected');
-        // Clear selected art and messages when disconnected
-        setSelectedArt(null);
-        setMessages([]);
-      }
-
-      setPreviousConnectionState(isCurrentlyLoggedIn);
-    };
-
-    // Check when component mounts and when wallet connection changes
-    checkWalletConnection();
-
-    // Set up event listener for storage changes
-    window.addEventListener('storage', checkWalletConnection);
-
-    return () => {
-      window.removeEventListener('storage', checkWalletConnection);
-    };
-  }, [connected, publicKey, previousConnectionState]);
+  const { isUserLoggedIn } = useAppSelector(state => state.appState);
 
   // Set initial selected art
   useEffect(() => {
-    if (userArt.length > 0 && !selectedArt && isLoggedIn) {
+    if (userArt.length > 0 && !selectedArt && isUserLoggedIn) {
       setSelectedArt(userArt[0]);
       initializeChat(userArt[0]);
     }
-  }, [userArt, isLoggedIn]);
+  }, [userArt, isUserLoggedIn, selectedArt]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -98,9 +61,17 @@ export default function ChatPage() {
   useEffect(() => {
     if (artError) {
       if ('status' in artError && artError.status === 401) {
-        toast.error('Authentication required', 'Something went wrong while loading your art pieces');
+        toast({
+          title: 'Authentication required',
+          description: 'Something went wrong while loading your art pieces',
+          variant: 'destructive'
+        });
       } else {
-        toast.error('Error loading art', 'Something went wrong while loading your art pieces');
+        toast({
+          title: 'Error loading art',
+          description: 'Something went wrong while loading your art pieces',
+          variant: 'destructive'
+        });
       }
     }
   }, [artError]);
@@ -125,10 +96,11 @@ export default function ChatPage() {
 
     // Check if user has enough credits
     if (credits && credits.credits_balance < MESSAGE_COST) {
-      toast.error(
-        "Insufficient Credits",
-        `You need ${MESSAGE_COST} credit to send a message. Current balance: ${credits.credits_balance}`
-      );
+      toast({
+        title: 'Insufficient Credits',
+        description: `You need ${MESSAGE_COST} credit to send a message. Current balance: ${credits.credits_balance}`,
+        variant: 'destructive'
+      });
       return;
     }
 
@@ -172,9 +144,17 @@ export default function ChatPage() {
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === 'Authentication required') {
-          toast.error('Authentication required', 'Please connect your wallet to continue chatting');
+          toast({
+            title: 'Authentication required',
+            description: 'Please connect your wallet to continue chatting',
+            variant: 'destructive'
+          });
         } else {
-          toast.error('Error sending message', 'Failed to send your message. Please try again.');
+          toast({
+            title: 'Error sending message',
+            description: 'Failed to send your message. Please try again.',
+            variant: 'destructive'
+          });
         }
         // Remove the failed message from the chat
         setMessages(prev => prev.slice(0, -1));
@@ -189,10 +169,6 @@ export default function ChatPage() {
     currentPage * ITEMS_PER_PAGE,
     (currentPage + 1) * ITEMS_PER_PAGE
   );
-
-  const handleConnectWallet = () => {
-    setVisible(true);
-  };
 
   return (
     <RootLayout>
@@ -211,7 +187,7 @@ export default function ChatPage() {
                     <div className="flex items-center gap-2 bg-purple-500/10 px-3 py-1 rounded-lg border border-purple-500/20 ml-auto">
                       <Coins className="w-3 h-3 text-purple-400" />
                       <span className="text-xs text-purple-300">
-                        {!isLoggedIn ? (
+                        {!isUserLoggedIn ? (
                           'Connect wallet'
                         ) : isLoadingCredits ? (
                           '...'
@@ -236,17 +212,10 @@ export default function ChatPage() {
                 <div className="flex items-center justify-center p-8">
                   <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
                 </div>
-              ) : !isLoggedIn ? (
+              ) : !isUserLoggedIn ? (
                 <div className="flex flex-col items-center justify-center p-8 text-center gap-3">
                   <Wallet className="h-8 w-8 text-purple-500/50" />
                   <p className="text-sm text-gray-400">Connect your wallet to view your personal art collection</p>
-                  <Button
-                    onClick={handleConnectWallet}
-                    className="mt-4 bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20"
-                  >
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Connect Wallet
-                  </Button>
                 </div>
               ) : userArt.length === 0 ? (
                 <div className="p-4 text-center">
@@ -264,11 +233,15 @@ export default function ChatPage() {
                           selectedArt?.id === art.id ? "ring-2 ring-purple-500" : "hover:ring-2 hover:ring-purple-500/50"
                         )}
                       >
-                        <img
-                          src={art.image_url}
-                          alt={art.title}
-                          className="w-full aspect-square object-cover"
-                        />
+                        <div className="relative aspect-square">
+                          <Image
+                            src={art.image_url}
+                            alt={art.title}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        </div>
                         {isSidebarOpen && (
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="absolute bottom-0 left-0 right-0 p-2">
@@ -313,20 +286,13 @@ export default function ChatPage() {
 
             {/* Chat Section */}
             <div className="flex-1 bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl overflow-hidden">
-              {!isLoggedIn ? (
+              {!isUserLoggedIn ? (
                 <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center p-8">
                   <Wallet className="w-12 h-12 text-purple-400 mb-6" />
                   <h2 className="text-xl font-medium text-gray-200 mb-3">Connect Your Wallet</h2>
                   <p className="text-sm text-gray-400 mb-6 max-w-md">
                     Connect your wallet to chat with your art pieces and bring them to life through AI-driven conversations
                   </p>
-                  <Button
-                    onClick={handleConnectWallet}
-                    className="bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20"
-                  >
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Connect Wallet
-                  </Button>
                 </div>
               ) : selectedArt ? (
                 <div className="flex flex-col h-[calc(100vh-8rem)]">
@@ -334,11 +300,13 @@ export default function ChatPage() {
                   <div className="p-4 border-b border-gray-800">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-lg overflow-hidden">
-                          <img
+                        <div className="h-10 w-10 rounded-lg overflow-hidden relative">
+                          <Image
                             src={selectedArt.image_url}
                             alt={selectedArt.title}
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                         </div>
                         <div>
@@ -362,11 +330,13 @@ export default function ChatPage() {
                         )}
                       >
                         {message.sender === 'ai' && (
-                          <div className="h-8 w-8 rounded-lg overflow-hidden flex-shrink-0">
-                            <img
+                          <div className="h-8 w-8 rounded-lg overflow-hidden flex-shrink-0 relative">
+                            <Image
                               src={selectedArt.image_url}
                               alt="AI"
-                              className="w-full h-full object-cover"
+                              fill
+                              className="object-cover"
+                              unoptimized
                             />
                           </div>
                         )}
@@ -386,11 +356,13 @@ export default function ChatPage() {
                         animate={{ opacity: 1, y: 0 }}
                         className="flex gap-3 max-w-[80%]"
                       >
-                        <div className="h-8 w-8 rounded-lg overflow-hidden flex-shrink-0">
-                          <img
+                        <div className="h-8 w-8 rounded-lg overflow-hidden flex-shrink-0 relative">
+                          <Image
                             src={selectedArt.image_url}
                             alt="AI"
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                         </div>
                         <div className="bg-gray-800/50 rounded-xl p-3">
@@ -432,7 +404,7 @@ export default function ChatPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span>
-                          {!isLoggedIn ? (
+                          {!isUserLoggedIn ? (
                             'Connect wallet to view credits'
                           ) : (
                             `Available credits: ${isLoadingCredits ? '...' : credits?.credits_balance || 0}`

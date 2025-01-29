@@ -1,7 +1,8 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi } from '@reduxjs/toolkit/query/react';
 import { Art, MarketplaceListing } from '@/lib/supabase';
 import { Connection } from '@solana/web3.js';
 import { Metaplex, walletAdapterIdentity, WalletAdapter } from '@metaplex-foundation/js';
+import { baseQueryWithOnQueryStarted } from './api.utils';
 
 interface MintNFTResponse {
   art: Art;
@@ -19,16 +20,7 @@ interface CreateListingRequest {
 
 export const nftApi = createApi({
   reducerPath: 'nftApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: '/api',
-    prepareHeaders: (headers) => {
-      const walletAddress = window.localStorage.getItem('walletAddress');
-      if (walletAddress) {
-        headers.set('authorization', `Bearer ${walletAddress}`);
-      }
-      return headers;
-    }
-  }),
+  baseQuery: baseQueryWithOnQueryStarted,
   tagTypes: ['NFT', 'Listing'],
   endpoints: (builder) => ({
     // NFT Operations

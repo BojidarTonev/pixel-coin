@@ -1,4 +1,5 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { baseQueryWithOnQueryStarted } from './api.utils';
 
 interface User {
   id: number;
@@ -13,7 +14,7 @@ interface UserResponse {
 
 export const userApi = createApi({
   reducerPath: 'userApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+  baseQuery: baseQueryWithOnQueryStarted,
   tagTypes: ['User'],
   endpoints: (builder) => ({
     authenticateUser: builder.mutation<UserResponse, { wallet_address: string }>({
@@ -25,8 +26,11 @@ export const userApi = createApi({
       invalidatesTags: ['User'],
     }),
     
-    getCurrentUser: builder.query<User | null, void>({
-      query: () => '/auth/me',
+    getCurrentUser: builder.query<User, void>({
+      query: () => ({
+        url: '/auth/me',
+        method: 'GET'
+      }),
       providesTags: ['User'],
     }),
   }),

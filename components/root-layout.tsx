@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { Sidebar } from './sidebar';
 import { cn } from '@/lib/utils';
-import { WalletConnectionHandler } from '@/components/wallet-connection-handler';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/toaster';
 
 interface RootLayoutProps {
   children: React.ReactNode;
@@ -15,8 +14,7 @@ export function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <div className="relative min-h-screen">
-      <WalletConnectionHandler />
-      <Toaster position="bottom-right" />
+      <Toaster />
       <div className="flex">
         <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
         <main className={cn(

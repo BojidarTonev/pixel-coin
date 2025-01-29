@@ -13,15 +13,18 @@ import {
   Map,
   ChevronLeft,
   ChevronRight,
-  Tag
+  Tag,
+  Loader2
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { customToast as toast } from '@/components/ui/toast';
+import { toast } from '@/hooks/use-toast';
 import { useAuthenticateUserMutation } from '@/redux/services/user.service';
 import { motion } from 'framer-motion';
+import { useAppSelector } from '@/redux/store';
+import { useDispatch } from 'react-redux';
+import { setUserLoggedIn, setUserLoggedOut } from '@/redux/features/app-state-slice';
 
 const sidebarItems = [
   { name: 'Home', href: '/', icon: Home },
@@ -40,97 +43,80 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const dispatch = useDispatch();
+  const { isUserLoggedIn } = useAppSelector(state => state.appState)
   const { connected, publicKey, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
   const [authenticateUser] = useAuthenticateUserMutation();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [previousConnectionState, setPreviousConnectionState] = useState(false);
 
-  // Check localStorage on mount and when connection state changes
-  useEffect(() => {
-    const checkWalletConnection = () => {
-      const walletAddress = window.localStorage.getItem('walletAddress');
-      setIsLoggedIn(!!walletAddress);
-    };
-
-    // Initial check
-    checkWalletConnection();
-
-    // Set up event listener for storage changes
-    window.addEventListener('storage', checkWalletConnection);
-
-    return () => {
-      window.removeEventListener('storage', checkWalletConnection);
-    };
-  }, []);
-
-  // Handle wallet connection changes
-  useEffect(() => {
-    const handleConnection = async () => {
+  const handleConnectWallet = async () => {
+    try {
       if (connected && publicKey) {
+        toast({
+          title: 'Connecting Wallet',
+          description: (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Authenticating your wallet...</span>
+            </div>
+          ),
+          variant: 'loading'
+        });
+
         const walletAddress = publicKey.toBase58();
-        try {
-          // Store wallet address in localStorage
-          window.localStorage.setItem('walletAddress', walletAddress);
-          setIsLoggedIn(true);
+        window.localStorage.setItem('walletAddress', walletAddress);
 
-          // Try to authenticate user with wallet address
-          const response = await authenticateUser({ 
-            wallet_address: walletAddress 
-          }).unwrap();
+        const response = await authenticateUser({ 
+          wallet_address: walletAddress 
+        }).unwrap();
 
-          // Show appropriate toast message
-          if (response.isNewUser) {
-            toast.success(
-              'Account Created',
-              `Welcome! Your account has been created and connected to ${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
-            );
-          } else if (!previousConnectionState) {
-            // Only show welcome back message when newly connected
-            toast.success(
-              'Wallet Connected',
-              `Welcome back! Connected to ${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
-            );
-          }
-        } catch (error) {
-          console.error('Authentication error:', error);
-          toast.error(
-            'Authentication Failed',
-            'Failed to authenticate with wallet. Please try again.'
-          );
-          // Remove wallet address from localStorage
-          window.localStorage.removeItem('walletAddress');
-          setIsLoggedIn(false);
-          // Disconnect wallet if authentication fails
-          await disconnect();
-        }
-      } else if (!connected && previousConnectionState) {
-        // Only show disconnection toast when actually disconnecting
-        window.localStorage.removeItem('walletAddress');
-        setIsLoggedIn(false);
-        toast.success('Wallet Disconnected');
+        dispatch(setUserLoggedIn(response.user));
+
+        toast({
+          title: response.isNewUser ? 'Account Created' : 'Wallet Connected',
+          description: `${response.isNewUser ? 'Welcome! Your account has been created' : 'Welcome back!'} and connected to ${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`,
+          variant: 'default'
+        });
+      } else {
+        // Show guiding toast for wallet connection
+        toast({
+          title: 'Connect Wallet',
+          description: 'Please select a wallet and approve the connection request.',
+          variant: 'loading'
+        });
+        // Open wallet modal
+        setVisible(true);
       }
-
-      setPreviousConnectionState(connected);
-    };
-
-    handleConnection();
-  }, [connected, publicKey, previousConnectionState, authenticateUser, disconnect]);
-
-  const handleConnectWallet = () => {
-    setVisible(true);
+    } catch (error) {
+      console.error('Authentication error:', error);
+      window.localStorage.removeItem('walletAddress');
+      await disconnect();
+      dispatch(setUserLoggedOut());
+      
+      toast({
+        title: 'Authentication Failed',
+        description: 'Failed to authenticate with wallet. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleDisconnectWallet = async () => {
     try {
       await disconnect();
       window.localStorage.removeItem('walletAddress');
-      setIsLoggedIn(false);
+      dispatch(setUserLoggedOut());
+      toast({
+        title: 'Wallet Disconnected',
+        description: 'Your wallet has been disconnected.',
+        variant: 'default'
+      });
     } catch {
-      toast.error(
-        'Disconnection Failed',
-        'Failed to disconnect wallet. Please try again.'
-      );
+      toast({
+        title: 'Disconnection Failed',
+        description: 'Failed to disconnect wallet. Please try again.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -196,7 +182,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           "p-4 mt-auto border-t border-gray-800",
           !isOpen && "p-2"
         )}>
-          {isLoggedIn ? (
+          {isUserLoggedIn ? (
             <div className="space-y-2">
               {isOpen && (
                 <div className="flex items-center justify-between text-xs text-gray-400">

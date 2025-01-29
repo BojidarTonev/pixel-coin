@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useGenerateArtMutation, useGetUserCreditsQuery } from '@/redux/services/art.service';
 import { Button } from '@/components/ui/button';
 import { Loader2, Download, Share2, RefreshCcw, Coins, Wallet } from 'lucide-react';
-import { customToast as toast } from '@/components/ui/toast';
+import { toast } from '@/hooks/use-toast';
 import { RootLayout } from '@/components/root-layout';
 import { motion } from 'framer-motion';
 import { Slider } from '@/components/ui/slider';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import {
   Select,
   SelectContent,
@@ -17,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAppSelector } from '@/redux/store';
+import Image from 'next/image';
 
 // Cost constants
 const GENERATION_COST = 5; // credits per generation
@@ -40,31 +40,7 @@ export default function GeneratePage() {
   const { data: credits, isLoading: isLoadingCredits } = useGetUserCreditsQuery();
   const [intensity, setIntensity] = useState([50]);
   const [style, setStyle] = useState('knights');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { connected, publicKey } = useWallet();
-  const { setVisible } = useWalletModal();
-
-  // Check wallet connection status
-  useEffect(() => {
-    const checkWalletConnection = () => {
-      const walletAddress = window.localStorage.getItem('walletAddress');
-      setIsLoggedIn(!!walletAddress);
-    };
-
-    // Check when component mounts and when wallet connection changes
-    checkWalletConnection();
-
-    // Set up event listener for storage changes
-    window.addEventListener('storage', checkWalletConnection);
-
-    return () => {
-      window.removeEventListener('storage', checkWalletConnection);
-    };
-  }, [connected, publicKey]); // Add connected and publicKey as dependencies
-
-  const handleConnectWallet = () => {
-    setVisible(true);
-  };
+  const { isUserLoggedIn } = useAppSelector(state => state.appState)
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -73,17 +49,19 @@ export default function GeneratePage() {
     
     // Check if user has enough credits
     if (!credits || credits.credits_balance < 5) {
-      toast.error(
-        'Insufficient Credits',
-        'You need at least 5 credits to generate art. Please deposit more credits.'
-      );
+      toast({
+        title: 'Insufficient Credits',
+        description: 'You need at least 5 credits to generate art. Please deposit more credits.',
+        variant: 'destructive'
+      });
       return;
     }
 
-    toast.loading(
-      'Generating Art',
-      'Please wait while we create your masterpiece...'
-    );
+    toast({
+      title: 'Generating Art',
+      description: 'Please wait while we create your masterpiece...',
+      variant: 'loading'
+    });
 
     try {
       const result = await generateArt({ prompt: formattedPrompt }).unwrap();
@@ -98,23 +76,26 @@ export default function GeneratePage() {
         prompt: formattedPrompt
       }, ...prevImages]);
 
-      toast.success(
-        'Art Generated',
-        'Your pixel art has been created successfully!'
-      );
+      toast({
+        title: 'Art Generated',
+        description: 'Your pixel art has been created successfully!',
+        variant: 'default'
+      });
       setPrompt('');
     } catch (error: unknown) {
       const err = error as { status?: number; data?: { error?: string } };
       if (err.status === 401) {
-        toast.error(
-          'Authentication Required',
-          'Please connect your wallet to generate art.'
-        );
+        toast({
+          title: 'Authentication Required',
+          description: 'Please connect your wallet to generate art.',
+          variant: 'destructive'
+        });
       } else {
-        toast.error(
-          'Generation Failed',
-          err.data?.error || 'Failed to generate art. Please try again.'
-        );
+        toast({
+          title: 'Generation Failed',
+          description: err.data?.error || 'Failed to generate art. Please try again.',
+          variant: 'destructive'
+        });
       }
     }
   };
@@ -142,7 +123,7 @@ export default function GeneratePage() {
               <div className="flex items-center gap-2 bg-purple-500/10 px-4 py-2 rounded-lg border border-purple-500/20">
                 <Coins className="w-4 h-4 text-purple-400" />
                 <span className="text-xs text-purple-300">
-                  {!isLoggedIn ? (
+                  {!isUserLoggedIn ? (
                     'Connect wallet'
                   ) : isLoadingCredits ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -158,7 +139,7 @@ export default function GeneratePage() {
           </div>
 
           {/* Main Content */}
-          {!isLoggedIn ? (
+          {!isUserLoggedIn ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -170,13 +151,6 @@ export default function GeneratePage() {
                 <p className="text-sm text-gray-400 mb-6">
                   Connect your wallet to start generating medieval pixel art
                 </p>
-                <Button
-                  onClick={handleConnectWallet}
-                  className="bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20"
-                >
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Connect Wallet
-                </Button>
               </div>
             </motion.div>
           ) : (
@@ -266,11 +240,15 @@ export default function GeneratePage() {
                         key={image.id}
                         className="relative group rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 p-4"
                       >
-                        <img
-                          src={image.url}
-                          alt={image.prompt}
-                          className="w-full rounded-lg object-cover"
-                        />
+                        <div className="relative aspect-square">
+                          <Image
+                            src={image.url}
+                            alt={image.prompt}
+                            fill
+                            className="object-cover rounded-lg"
+                            unoptimized
+                          />
+                        </div>
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-4">
                           <Button
                             variant="secondary"

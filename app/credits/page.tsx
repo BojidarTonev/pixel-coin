@@ -22,23 +22,23 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { customToast as toast } from '@/components/ui/toast';
+import { toast } from '@/hooks/use-toast';
 import { useGetCreditsBalanceQuery, useGetTransactionsQuery, useDepositCreditsMutation } from '@/redux/services/credits.service';
+import { useAppSelector } from '@/redux/store';
 
 export default function CreditsPage() {
   const [depositAmount, setDepositAmount] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
   const { connected, publicKey } = useWallet();
-  const { setVisible } = useWalletModal();
-  
+  const { isUserLoggedIn } = useAppSelector(state => state.appState);
+
   // Fetch credits and transactions
   const { data: credits, isLoading: isLoadingCredits } = useGetCreditsBalanceQuery();
   const { data: transactions, isLoading: isLoadingTransactions } = useGetTransactionsQuery();
   const [depositCredits] = useDepositCreditsMutation();
 
   const handleDeposit = async () => {
-    if (!depositAmount || !connected) return;
+    if (!depositAmount || !connected || !isUserLoggedIn) return;
     
     setIsDepositing(true);
     try {
@@ -49,24 +49,21 @@ export default function CreditsPage() {
         transaction_hash 
       }).unwrap();
       
-      toast.success(
-        'Deposit Successful',
-        `Successfully deposited ${depositAmount} PIXEL tokens`
-      );
+      toast({
+        title: 'Deposit Successful',
+        description: `Successfully deposited ${depositAmount} PIXEL tokens`
+      });
       setDepositAmount('');
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e: unknown) {
-      toast.error(
-        'Deposit Failed',
-        'There was an error processing your deposit. Please try again.'
-      );
+      toast({
+        title: 'Deposit Failed',
+        description: 'There was an error processing your deposit. Please try again.',
+        variant: 'destructive'
+      });
     } finally {
       setIsDepositing(false);
     }
-  };
-
-  const handleConnectWallet = () => {
-    setVisible(true);
   };
 
   const formatWalletAddress = (address: string) => {
@@ -93,7 +90,7 @@ export default function CreditsPage() {
             </p>
           </motion.div>
 
-          {connected ? (
+          {isUserLoggedIn ? (
             <>
               {/* Credit Balance Card */}
               <motion.div
@@ -243,13 +240,6 @@ export default function CreditsPage() {
                 <p className="text-sm text-gray-400 mb-6">
                   Connect your wallet to view your credits and make deposits
                 </p>
-                <Button
-                  onClick={handleConnectWallet}
-                  className="bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20"
-                >
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Connect Wallet
-                </Button>
               </div>
             </motion.div>
           )}

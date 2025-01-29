@@ -124,68 +124,68 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
                 </div>
 
                 {/* NFT Status */}
-                {art.isMinted ? (
-                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-purple-300 text-sm mb-2">
-                      <Sparkles className="h-4 w-4" />
-                      <span>Minted as NFT</span>
-                    </div>
-                    <p className="text-xs text-gray-400">
-                      NFT Address: {art.mintedNftAddress?.slice(0, 8)}...{art.mintedNftAddress?.slice(-8)}
-                    </p>
-                  </div>
-                ) : (
-                  <Button
-                    onClick={handleMint}
-                    className="w-full bg-purple-500 hover:bg-purple-600 text-white"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Mint as NFT
-                  </Button>
-                )}
-
-                {/* List for Sale (only show if minted) */}
-                {art.isMinted && (
-                  <div className="space-y-4">
-                    <div className="flex gap-4">
-                      <Input
-                        type="number"
-                        placeholder="Price in SOL..."
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        className="flex-1 bg-gray-900/50 border-gray-800 text-gray-300 text-sm"
-                      />
+                    {art.isMinted ? (
+                      <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-purple-300 text-sm mb-2">
+                          <Sparkles className="h-4 w-4" />
+                          <span>Minted as NFT</span>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          NFT Address: {art.mintedNftAddress?.slice(0, 8)}...{art.mintedNftAddress?.slice(-8)}
+                        </p>
+                      </div>
+                    ) : (
                       <Button
-                        onClick={handleList}
-                        disabled={!price}
-                        className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-300"
+                        onClick={handleMint}
+                        className="w-full bg-purple-500 hover:bg-purple-600 text-white"
                       >
-                        <Tag className="h-4 w-4 mr-2" />
-                        List for Sale
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Mint as NFT
                       </Button>
-                    </div>
-                  </div>
-                )}
+                    )}
+
+                    {/* List for Sale (only show if minted) */}
+                    {art.isMinted && (
+                      <div className="space-y-4">
+                        <div className="flex gap-4">
+                          <Input
+                            type="number"
+                            placeholder="Price in SOL..."
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            className="flex-1 bg-gray-900/50 border-gray-800 text-gray-300 text-sm"
+                          />
+                          <Button
+                            onClick={handleList}
+                            disabled={!price}
+                            className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-300"
+                          >
+                            <Tag className="h-4 w-4 mr-2" />
+                            List for Sale
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                 {/* Actions */}
                 <div className="flex gap-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border-purple-500/20 hover:border-purple-500/30"
-                  >
-                    <MessageCircle className="h-3 w-3 mr-2" />
-                    Chat with Art
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs bg-gray-800/50 hover:bg-gray-800/70 text-gray-300 border-gray-700"
-                    onClick={() => window.open(art.imageUrl, '_blank')}
-                  >
-                    <Download className="h-3 w-3 mr-2" />
-                    Download
-                  </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border-purple-500/20 hover:border-purple-500/30"
+                      >
+                        <MessageCircle className="h-3 w-3 mr-2" />
+                        Chat with Art
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs bg-gray-800/50 hover:bg-gray-800/70 text-gray-300 border-gray-700"
+                        onClick={() => window.open(art.imageUrl, '_blank')}
+                      >
+                        <Download className="h-3 w-3 mr-2" />
+                        Download
+                      </Button>
                   <Button
                     variant="outline"
                     size="sm"

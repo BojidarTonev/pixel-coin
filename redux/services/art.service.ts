@@ -1,4 +1,5 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { baseQueryWithOnQueryStarted } from './api.utils';
 
 interface ErrorResponse {
   status: number;
@@ -21,16 +22,7 @@ interface Credits {
 
 export const artApi = createApi({
   reducerPath: 'artApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: '/api',
-    prepareHeaders: (headers) => {
-      const walletAddress = window.localStorage.getItem('walletAddress');
-      if (walletAddress) {
-        headers.set('authorization', walletAddress);
-      }
-      return headers;
-    }
-  }),
+  baseQuery: baseQueryWithOnQueryStarted,
   tagTypes: ['Credits'],
   endpoints: (builder) => ({
     generateArt: builder.mutation<Art, { prompt: string }>({

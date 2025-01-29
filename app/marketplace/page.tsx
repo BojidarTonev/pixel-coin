@@ -4,10 +4,8 @@ import { useState } from 'react';
 import { RootLayout } from '@/components/root-layout';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Share2, Download, Search, Filter, Wallet, Tag, Sparkles } from 'lucide-react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { customToast as toast } from '@/components/ui/toast';
+import { Search, Filter, Wallet, Tag, Sparkles } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -16,9 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { useGetListingsQuery, usePurchaseListingMutation } from '@/redux/services/nft.service';
 import Image from 'next/image';
+import { useAppSelector } from '@/redux/store';
 
 const sortOptions = [
   { value: 'recent', label: 'Most Recent' },
@@ -44,11 +42,9 @@ const item = {
 export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { connected, publicKey } = useWallet();
-  const { setVisible } = useWalletModal();
   const { data: listings = [], isLoading } = useGetListingsQuery();
   const [purchaseListing] = usePurchaseListingMutation();
+  const { isUserLoggedIn } = useAppSelector(state => state.appState)
 
   // Filter and sort listings
   const filteredListings = listings
@@ -68,21 +64,26 @@ export default function MarketplacePage() {
       }
     });
 
-  const handleConnectWallet = () => {
-    setVisible(true);
-  };
-
   const handlePurchase = async (listingId: number) => {
     try {
-      toast.loading('Processing Purchase', 'Please wait while we process your purchase...');
+      toast({
+        title: 'Processing Purchase',
+        description: 'Please wait while we process your purchase...',
+        variant: 'loading'
+      });
       await purchaseListing(listingId).unwrap();
-      toast.success('Purchase Complete', 'You have successfully purchased this NFT!');
+      toast({
+        title: 'Purchase Complete',
+        description: 'You have successfully purchased this NFT!',
+        variant: 'default'
+      });
     } catch (error) {
       console.error('Purchase error:', error);
-      toast.error(
-        'Purchase Failed',
-        'Failed to complete purchase. Please try again.'
-      );
+      toast({
+        title: 'Purchase Failed',
+        description: 'Failed to complete purchase. Please try again.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -160,7 +161,7 @@ export default function MarketplacePage() {
                 <div className="animate-spin w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full mx-auto mb-4" />
                 <p className="text-gray-400">Loading listings...</p>
               </motion.div>
-            ) : !connected ? (
+            ) : !isUserLoggedIn ? (
               <motion.div
                 variants={item}
                 className="col-span-full text-center py-24"
@@ -170,13 +171,6 @@ export default function MarketplacePage() {
                 <p className="text-sm text-gray-400 mb-6">
                   Connect your wallet to start buying and selling NFTs
                 </p>
-                <Button
-                  onClick={handleConnectWallet}
-                  className="bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20"
-                >
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Connect Wallet
-                </Button>
               </motion.div>
             ) : filteredListings.length === 0 ? (
               <motion.div 

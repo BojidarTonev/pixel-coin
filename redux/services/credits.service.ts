@@ -1,4 +1,5 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { baseQueryWithOnQueryStarted } from './api.utils';
 
 interface Credits {
   credits_balance: number;
@@ -20,17 +21,7 @@ interface DepositCreditsRequest {
 
 export const creditsApi = createApi({
   reducerPath: 'creditsApi',
-  baseQuery: fetchBaseQuery({ 
-    baseUrl: '/api',
-    prepareHeaders: (headers) => {
-      // Get wallet address from localStorage
-      const walletAddress = window.localStorage.getItem('walletAddress');
-      if (walletAddress) {
-        headers.set('authorization', walletAddress);
-      }
-      return headers;
-    }
-  }),
+  baseQuery: baseQueryWithOnQueryStarted,
   tagTypes: ['Credits', 'Transactions'],
   endpoints: (builder) => ({
     getCreditsBalance: builder.query<Credits, void>({

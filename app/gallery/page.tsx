@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { RootLayout } from '@/components/root-layout';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Share2, Download, Search, Filter, Wallet } from 'lucide-react';
-import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { customToast as toast } from '@/components/ui/toast';
 import {
   Select,
   SelectContent,
@@ -20,6 +18,8 @@ import { cn } from '@/lib/utils';
 import { ArtDetailsModal } from '@/components/art-details-modal';
 import { useGetAllArtQuery, useGetUserArtQuery } from '@/redux/services/art.service';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { useAppSelector } from '@/redux/store';
 
 interface ArtPiece {
   id: number;
@@ -55,49 +55,11 @@ export default function GalleryPage() {
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPiece, setSelectedPiece] = useState<ArtPiece | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { connected, publicKey } = useWallet();
-  const { setVisible } = useWalletModal();
-  const [previousConnectionState, setPreviousConnectionState] = useState(false);
+  const { isUserLoggedIn } = useAppSelector(state => state.appState);
 
   // Fetch data based on view mode
   const { data: allArt = [], isLoading: isLoadingAll } = useGetAllArtQuery();
   const { data: userArt = [], isLoading: isLoadingUser } = useGetUserArtQuery();
-
-  // Check wallet connection status and show toasts
-  useEffect(() => {
-    const checkWalletConnection = () => {
-      const walletAddress = window.localStorage.getItem('walletAddress');
-      const isCurrentlyLoggedIn = !!walletAddress;
-      setIsLoggedIn(isCurrentlyLoggedIn);
-
-      // Show toast only when connection state changes
-      if (isCurrentlyLoggedIn && !previousConnectionState) {
-        toast.success(
-          'Wallet Connected',
-          `Connected to ${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
-        );
-      } else if (!isCurrentlyLoggedIn && previousConnectionState) {
-        toast.success('Wallet Disconnected');
-      }
-
-      setPreviousConnectionState(isCurrentlyLoggedIn);
-    };
-
-    // Check when component mounts and when wallet connection changes
-    checkWalletConnection();
-
-    // Set up event listener for storage changes
-    window.addEventListener('storage', checkWalletConnection);
-
-    return () => {
-      window.removeEventListener('storage', checkWalletConnection);
-    };
-  }, [connected, publicKey, previousConnectionState]);
-
-  const handleConnectWallet = () => {
-    setVisible(true);
-  };
 
   // Get the appropriate art pieces based on view mode
   const artPieces = viewMode === 'my' ? userArt : allArt;
@@ -220,7 +182,7 @@ export default function GalleryPage() {
                 <div className="animate-spin w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full mx-auto mb-4" />
                 <p className="text-gray-400">Loading art pieces...</p>
               </motion.div>
-            ) : viewMode === 'my' && !isLoggedIn ? (
+            ) : viewMode === 'my' && !isUserLoggedIn ? (
               <motion.div
                 variants={item}
                 className="col-span-full text-center py-24"
@@ -230,13 +192,6 @@ export default function GalleryPage() {
                 <p className="text-sm text-gray-400 mb-6">
                   Connect your wallet to view your personal art collection
                 </p>
-                <Button
-                  onClick={handleConnectWallet}
-                  className="bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20"
-                >
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Connect Wallet
-                </Button>
               </motion.div>
             ) : filteredArt.length === 0 ? (
               <motion.div 
@@ -261,11 +216,15 @@ export default function GalleryPage() {
                   className="group relative rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer"
                   onClick={() => setSelectedPiece(piece)}
                 >
-                  <img
-                    src={piece.image_url}
-                    alt={piece.title}
-                    className="w-full aspect-square object-cover"
-                  />
+                  <div className="relative aspect-square">
+                    <Image
+                      src={piece.image_url}
+                      alt={piece.title}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="absolute bottom-0 left-0 right-0 p-4">
                       <h3 className="text-sm font-medium text-gray-100 mb-2">{piece.title}</h3>
