@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { RootLayout } from '@/components/root-layout';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Download, Search, Filter, Wallet, MessageSquare, Sparkles } from 'lucide-react';
+import { Download, Search, Filter, Wallet, MessageSquare, Sparkles, Tag } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAppSelector, type RootState } from '@/redux/store';
 import { toast } from '@/hooks/use-toast';
+import { useGetListingsQuery } from '@/redux/services/nft.service';
 
 export interface ArtPiece {
   id: number;
@@ -31,6 +32,7 @@ export interface ArtPiece {
   minted_nft_address?: string;
   minted_token_uri?: string;
   creator_wallet?: string;
+  owner_wallet?: string;
 }
 
 const sortOptions = [
@@ -55,7 +57,7 @@ const item = {
 
 export default function GalleryPage() {
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<'my' | 'all'>('my');
+  const [viewMode, setViewMode] = useState<'my' | 'all'>('all');
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPiece, setSelectedPiece] = useState<ArtPiece | null>(null);
@@ -67,6 +69,7 @@ export default function GalleryPage() {
 
   // Fetch data based on view mode
   const { data: allArt = [], isLoading: isLoadingAll } = useGetAllArtQuery();
+  const { data: marketplaceListings = [] } = useGetListingsQuery();
 
   // Get the appropriate art pieces based on view mode
   const artPieces = viewMode === 'my' && currentUserId 
@@ -95,6 +98,16 @@ export default function GalleryPage() {
     setSelectedPiece(art);
   };
 
+  // Check if art piece is listed in marketplace
+  const isArtListed = (artId: number) => {
+    return marketplaceListings.some(listing => listing.art.id === artId && listing.status === 'active');
+  };
+
+  // Handle view listing click
+  const handleViewListing = (title: string) => {
+    router.push(`/marketplace?search=${encodeURIComponent(title)}`);
+  };
+
   return (
     <RootLayout>
       <div className="min-h-screen bg-black/75 backdrop-blur-sm relative overflow-x-hidden">
@@ -109,7 +122,7 @@ export default function GalleryPage() {
           >
             <h1 className="text-3xl font-medium text-gray-100 drop-shadow-lg mb-4">
               Pixel Art Gallery
-            </h1>
+              </h1>
             <p className="text-sm text-gray-300">
               Discover your creations and explore the world of pixel art
             </p>
@@ -120,35 +133,35 @@ export default function GalleryPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6 mb-12"
-          >
+              >
             <div className="flex flex-col md:flex-row gap-6">
               {/* View Mode */}
-              <div className="flex rounded-lg overflow-hidden border border-gray-800">
-                <Button
-                  variant="ghost"
-                  onClick={() => setViewMode('my')}
-                  className={cn(
-                    'rounded-none text-xs px-6 transition-all duration-300',
-                    viewMode === 'my' 
-                      ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/30' 
-                      : 'text-gray-400 hover:bg-purple-500/10 hover:text-purple-300'
-                  )}
-                >
-                  My Creations
-                </Button>
-                <Button
-                  variant="ghost"
+                <div className="flex rounded-lg overflow-hidden border border-gray-800">
+                  <Button
+                    variant="ghost"
                   onClick={() => setViewMode('all')}
-                  className={cn(
-                    'rounded-none text-xs px-6 transition-all duration-300',
+                    className={cn(
+                      'rounded-none text-xs px-6 transition-all duration-300',
                     viewMode === 'all' 
-                      ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/30' 
-                      : 'text-gray-400 hover:bg-purple-500/10 hover:text-purple-300'
-                  )}
-                >
-                  All Creations
-                </Button>
-              </div>
+                        ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/30' 
+                        : 'text-gray-400 hover:bg-purple-500/10 hover:text-purple-300'
+                    )}
+                  >
+                    All Creations
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setViewMode('my')}
+                    className={cn(
+                      'rounded-none text-xs px-6 transition-all duration-300',
+                    viewMode === 'my' 
+                        ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/30' 
+                        : 'text-gray-400 hover:bg-purple-500/10 hover:text-purple-300'
+                    )}
+                  >
+                    My Creations
+                  </Button>
+                </div>
 
               {/* Search */}
               <div className="flex-1 relative">
@@ -239,12 +252,20 @@ export default function GalleryPage() {
                       className="object-cover"
                       unoptimized
                     />
-                    {piece.is_minted && (
-                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-purple-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-purple-500/30">
-                        <Sparkles className="h-3 w-3 text-purple-300" />
-                        <span className="text-[10px] text-purple-300">NFT</span>
-                      </div>
-                    )}
+                    <div className="absolute top-2 right-2 flex flex-col gap-2">
+                      {piece.is_minted && (
+                        <div className="flex items-center gap-1 bg-purple-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-purple-500/30">
+                          <Sparkles className="h-3 w-3 text-purple-300" />
+                          <span className="text-[10px] text-purple-300">NFT</span>
+                        </div>
+                      )}
+                      {isArtListed(piece.id) && (
+                        <div className="flex items-center gap-1 bg-green-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-green-500/30">
+                          <Tag className="h-3 w-3 text-green-300" />
+                          <span className="text-[10px] text-green-300">Listed</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     {currentUserId && piece.user_id === currentUserId && (
@@ -295,8 +316,24 @@ export default function GalleryPage() {
                         )}
                       </>
                     )}
-                    <div className="absolute bottom-0 left-0 right-0 p-2">
-                      <p className="text-xs font-medium text-gray-100 truncate">{piece.title}</p>
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-gray-100">{piece.title}</h3>
+                        {isArtListed(piece.id) && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewListing(piece.title);
+                            }}
+                            className="h-7 bg-green-500/20 hover:bg-green-500/30 text-green-300 text-xs"
+                          >
+                            <Tag className="h-3 w-3 mr-1" />
+                            View Listing
+                          </Button>
+                        )}
+                      </div>
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-gray-400">
                           {format(new Date(piece.created_at), 'MMM d, yyyy')}

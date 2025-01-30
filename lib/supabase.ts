@@ -14,12 +14,18 @@ export interface Art {
 
 export interface MarketplaceListing {
   id: number;
-  userId: number;
-  artId: number;
-  nftAddress: string;
+  user_id: number;
+  art: {
+    id: number;
+    title: string;
+    image_url: string;
+    created_at: string;
+    minted_nft_address: string;
+    creator_wallet: string;
+  };
   price: number;
-  status: 'active' | 'sold' | 'canceled';
-  createdAt: string;
+  created_at: string;
+  status: 'active' | 'sold';
 }
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {

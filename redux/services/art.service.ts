@@ -11,6 +11,7 @@ interface Art {
   minted_nft_address?: string;
   minted_token_uri?: string;
   creator_wallet: string;
+  owner_wallet: string;
 }
 
 interface Credits {

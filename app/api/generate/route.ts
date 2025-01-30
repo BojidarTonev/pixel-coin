@@ -104,7 +104,8 @@ export async function POST(request: Request) {
         user_id: user.id,
         title: prompt,
         image_url: storedImageUrl,
-        creator_wallet: user.wallet_address
+        creator_wallet: user.wallet_address,
+        owner_wallet: user.wallet_address
       }])
       .select()
       .single();

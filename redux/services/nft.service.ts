@@ -14,15 +14,24 @@ interface MintNFTResponse {
   };
 }
 
-interface CreateListingRequest {
-  art_id: number;
+interface MarketplaceListing {
+  id: number;
+  user_id: number;
+  art: {
+    id: number;
+    title: string;
+    image_url: string;
+    created_at: string;
+  };
   price: number;
+  created_at: string;
+  status: 'active' | 'sold';
 }
 
 export const nftApi = createApi({
   reducerPath: 'nftApi',
   baseQuery: baseQueryWithOnQueryStarted,
-  tagTypes: ['NFT', 'Listing'],
+  tagTypes: ['NFT', 'Listings'],
   endpoints: (builder) => ({
     mintNFT: builder.mutation<MintNFTResponse, { artId: number, wallet: WalletAdapter }>({
       async queryFn({ artId, wallet }, _queryApi, _extraOptions, fetchWithBQ) {
@@ -126,31 +135,40 @@ export const nftApi = createApi({
     }),
 
     // Marketplace Operations
-    createListing: builder.mutation<MarketplaceListing, CreateListingRequest>({
-      query: (body) => ({
+    createListing: builder.mutation<MarketplaceListing, { artId: number; price: number }>({
+      query: ({ artId, price }) => ({
         url: '/marketplace/listings',
         method: 'POST',
-        body
+        body: {
+          art_id: artId,
+          price
+        }
       }),
-      invalidatesTags: ['Listing']
+      invalidatesTags: ['Listings']
     }),
 
     getListings: builder.query<MarketplaceListing[], void>({
-      query: () => '/marketplace/listings',
-      providesTags: ['Listing']
+      query: () => ({
+        url: '/marketplace/listings',
+        method: 'GET'
+      }),
+      providesTags: ['Listings']
     }),
 
     purchaseListing: builder.mutation<void, number>({
-      query: (listingId) => ({
-        url: `/marketplace/purchase/${listingId}`,
+      query: (id) => ({
+        url: `/marketplace/purchase/${id}`,
         method: 'POST'
       }),
-      invalidatesTags: ['Listing', 'NFT']
+      invalidatesTags: ['Listings']
     }),
 
     getUserListings: builder.query<MarketplaceListing[], void>({
-      query: () => '/marketplace/listings/user',
-      providesTags: ['Listing']
+      query: () => ({
+        url: '/marketplace/listings/user',
+        method: 'GET'
+      }),
+      providesTags: ['Listings']
     })
   })
 });
