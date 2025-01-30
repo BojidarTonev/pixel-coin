@@ -66,6 +66,7 @@ export default function GalleryPage() {
   const appState = useAppSelector((state: RootState) => state.appState);
   const user = appState.user;
   const currentUserId = user?.id;
+  const isUserLoggedIn = !!user;
 
   // Fetch data with pagination
   const { 
@@ -76,6 +77,23 @@ export default function GalleryPage() {
   } = useGetAllArtQuery({ 
     page, 
     limit: ITEMS_PER_PAGE 
+  }, {
+    // Disable automatic re-fetching when window regains focus
+    refetchOnFocus: false,
+    // Merge the new data with existing data
+    serializeQueryArgs: ({ endpointName }) => {
+      return endpointName;
+    },
+    merge: (currentCache, newItems) => {
+      if (!currentCache) return newItems;
+      return {
+        ...newItems,
+        data: [...currentCache.data, ...newItems.data],
+      };
+    },
+    forceRefetch({ currentArg, previousArg }) {
+      return currentArg !== previousArg;
+    },
   });
 
   const { data: marketplaceListings = [] } = useGetListingsQuery();
@@ -241,7 +259,7 @@ export default function GalleryPage() {
           >
             <h1 className="text-3xl font-medium text-gray-100 drop-shadow-lg mb-4">
               Pixel Art Gallery
-              </h1>
+            </h1>
             <p className="text-sm text-gray-300">
               Discover your creations and explore the world of pixel art
             </p>
@@ -252,65 +270,65 @@ export default function GalleryPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-6 mb-12"
-              >
+          >
             <div className="flex flex-col md:flex-row gap-6">
               {/* View Mode */}
                 <div className="flex rounded-lg overflow-hidden border border-gray-800">
-                  <Button
+              <Button
                     variant="ghost"
                   onClick={() => setViewMode('all')}
-                    className={cn(
+                className={cn(
                       'rounded-none text-xs px-6 transition-all duration-300',
                     viewMode === 'all' 
                         ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/30' 
                         : 'text-gray-400 hover:bg-purple-500/10 hover:text-purple-300'
-                    )}
-                  >
-                    All Creations
-                  </Button>
-                  <Button
+                )}
+              >
+                All Creations
+              </Button>
+              <Button
                     variant="ghost"
                     onClick={() => setViewMode('my')}
-                    className={cn(
+                className={cn(
                       'rounded-none text-xs px-6 transition-all duration-300',
                     viewMode === 'my' 
                         ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/30' 
                         : 'text-gray-400 hover:bg-purple-500/10 hover:text-purple-300'
-                    )}
+                )}
+              >
+                My Creations
+              </Button>
+            </div>
+
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search by title..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-xs bg-gray-900/50 border border-gray-800 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/30"
+              />
+            </div>
+
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[180px] text-xs bg-gray-900/50 border-gray-800 text-gray-300">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900/95 border-gray-800">
+                {sortOptions.map((option) => (
+                  <SelectItem 
+                    key={option.value} 
+                    value={option.value}
+                    className="text-xs text-gray-300 focus:bg-purple-500/20 focus:text-purple-300"
                   >
-                    My Creations
-                  </Button>
-                </div>
-
-              {/* Search */}
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Search by title..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-xs bg-gray-900/50 border border-gray-800 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/30"
-                />
-              </div>
-
-              {/* Sort */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px] text-xs bg-gray-900/50 border-gray-800 text-gray-300">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900/95 border-gray-800">
-                  {sortOptions.map((option) => (
-                    <SelectItem 
-                      key={option.value} 
-                      value={option.value}
-                      className="text-xs text-gray-300 focus:bg-purple-500/20 focus:text-purple-300"
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             </div>
           </motion.div>
 
