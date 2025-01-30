@@ -1,7 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithOnQueryStarted } from './api.utils';
 
-interface Art {
+export interface Art {
   id: number;
   title: string;
   image_url: string;
@@ -12,6 +12,17 @@ interface Art {
   minted_token_uri?: string;
   creator_wallet: string;
   owner_wallet: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  hasMore: boolean;
+  total: number;
+}
+
+export interface GetArtParams {
+  page: number;
+  limit: number;
 }
 
 interface Credits {
@@ -31,11 +42,27 @@ export const artApi = createApi({
       }),
       invalidatesTags: ['Credits'],
     }),
-    getAllArt: builder.query<Art[], void>({
-      query: () => ({
+    getAllArt: builder.query<PaginatedResponse<Art>, GetArtParams>({
+      query: ({ page, limit }) => ({
         url: '/art',
-        method: 'GET'
-      })
+        method: 'GET',
+        params: { page, limit }
+      }),
+      serializeQueryArgs: ({ endpointName }) => {
+        return endpointName;
+      },
+      merge: (currentCache, newItems) => {
+        if (currentCache && newItems) {
+          return {
+            ...newItems,
+            data: [...(currentCache.data || []), ...newItems.data]
+          };
+        }
+        return newItems;
+      },
+      forceRefetch({ currentArg, previousArg }) {
+        return currentArg?.page !== previousArg?.page;
+      }
     }),
     getUserArt: builder.query<Art[], void>({
       query: () => ({

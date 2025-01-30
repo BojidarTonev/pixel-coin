@@ -60,14 +60,14 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
       <DialogContent className="bg-gray-900/95 border-gray-800 p-0 max-w-2xl">
         <div className="relative">
           <div className="relative aspect-square">
-            <Image
-              src={listing.art.image_url}
-              alt={listing.art.title}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          </div>
+          <Image
+            src={listing.art.image_url}
+            alt={listing.art.title}
+            fill
+            className="object-cover"
+            unoptimized
+          />
+        </div>
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-medium text-gray-100">{listing.art.title}</h2>
@@ -110,14 +110,14 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
               </div>
             </div>
 
-            {!isOwner && (
+          {!isOwner && (
               <div className="flex gap-4">
-                <Button
+            <Button
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300"
                   onClick={onClose}
-                >
+            >
                   Cancel
-                </Button>
+            </Button>
                 <Button
                   className="flex-1 bg-purple-500 hover:bg-purple-600 text-white"
                   onClick={handlePurchaseClick}
@@ -126,8 +126,8 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
                   Buy Now for {listing.price} SOL
                 </Button>
               </div>
-            )}
-          </div>
+          )}
+        </div>
         </div>
       </DialogContent>
 
@@ -300,39 +300,39 @@ export default function MarketplacePage() {
               <div className="flex rounded-lg overflow-hidden border border-gray-800">
                 <button
                   onClick={() => setViewMode('all')}
-                  className={cn(
+                className={cn(
                     "px-4 py-2 text-xs transition-colors",
                     viewMode === 'all'
                       ? "bg-purple-500/20 text-purple-300"
                       : "text-gray-400 hover:text-gray-300"
-                  )}
-                >
-                  All Listings
+                )}
+              >
+                All Listings
                 </button>
                 <button
                   onClick={() => setViewMode('my')}
-                  className={cn(
+                className={cn(
                     "px-4 py-2 text-xs transition-colors",
                     viewMode === 'my'
                       ? "bg-purple-500/20 text-purple-300"
                       : "text-gray-400 hover:text-gray-300"
-                  )}
-                >
-                  My Listings
+                )}
+              >
+                My Listings
                 </button>
               </div>
 
               {/* Search and Sort */}
               <div className="flex-1 flex gap-4">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search listings..."
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search listings..."
                     className="w-full px-4 py-2 text-xs bg-gray-900/50 border border-gray-800 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/30"
-                  />
-                </div>
+                />
+              </div>
 
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-[180px] text-xs bg-gray-900/50 border-gray-800 text-gray-300">
@@ -352,15 +352,15 @@ export default function MarketplacePage() {
                 </Select>
 
                 {/* Add Listing Button - Always visible when logged in */}
-                {isUserLoggedIn && (
-                  <Button
-                    onClick={() => setIsAddListingOpen(true)}
+            {isUserLoggedIn && (
+              <Button
+                onClick={() => setIsAddListingOpen(true)}
                     className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
-                  >
+              >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Listing
-                  </Button>
-                )}
+              </Button>
+            )}
               </div>
             </div>
           </motion.div>
@@ -395,56 +395,56 @@ export default function MarketplacePage() {
               </div>
             ) : (
               filteredListings.map((listing) => {
-                const isListingOwner = currentUserId === listing.user_id;
-                return (
-                  <motion.div
-                    key={listing.id}
-                    variants={item}
-                    className="group relative rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer"
-                    onClick={() => setSelectedListing(listing)}
-                  >
-                    <div className="relative aspect-square">
-                      <Image
-                        src={listing.art.image_url}
-                        alt={listing.art.title}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-purple-500/20 px-2 py-1 rounded-lg backdrop-blur-sm">
-                        <Tag className="h-3 w-3 text-purple-300" />
-                        <span className="text-xs text-purple-300">{listing.price} SOL</span>
-                      </div>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-sm font-medium text-gray-100 mb-2">{listing.art.title}</h3>
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-gray-400">
-                            Listed {format(new Date(listing.created_at), 'MMM d, yyyy')}
-                          </div>
-                          {!isListingOwner && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-7 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePurchase(listing.id);
-                              }}
-                            >
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              Buy Now
-                            </Button>
-                          )}
+                  const isListingOwner = currentUserId === listing.user_id;
+                  return (
+                    <motion.div
+                      key={listing.id}
+                      variants={item}
+                      className="group relative rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer"
+                      onClick={() => setSelectedListing(listing)}
+                    >
+                      <div className="relative aspect-square">
+                        <Image
+                          src={listing.art.image_url}
+                          alt={listing.art.title}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                        <div className="absolute top-2 right-2 flex items-center gap-1 bg-purple-500/20 px-2 py-1 rounded-lg backdrop-blur-sm">
+                          <Tag className="h-3 w-3 text-purple-300" />
+                          <span className="text-xs text-purple-300">{listing.price} SOL</span>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                );
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <h3 className="text-sm font-medium text-gray-100 mb-2">{listing.art.title}</h3>
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-gray-400">
+                              Listed {format(new Date(listing.created_at), 'MMM d, yyyy')}
+                            </div>
+                            {!isListingOwner && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePurchase(listing.id);
+                                }}
+                              >
+                                <Sparkles className="h-3 w-3 mr-1" />
+                                Buy Now
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
               })
-            )}
-          </div>
+                    )}
+                  </div>
         </div>
       </div>
 

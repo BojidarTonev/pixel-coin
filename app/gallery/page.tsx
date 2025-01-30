@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { RootLayout } from '@/components/root-layout';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Download, Search, Filter, Wallet, MessageSquare, Sparkles, Tag } from 'lucide-react';
+import { Download, Search, Filter, MessageSquare, Sparkles, Tag, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -15,25 +15,16 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ArtDetailsModal } from '@/components/art-details-modal';
-import { useGetAllArtQuery } from '@/redux/services/art.service';
+import { useGetAllArtQuery, type Art } from '@/redux/services/art.service';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAppSelector, type RootState } from '@/redux/store';
 import { toast } from '@/hooks/use-toast';
-import { useGetListingsQuery } from '@/redux/services/nft.service';
+import { useGetListingsQuery, useMintNFTMutation } from '@/redux/services/nft.service';
+import { useWallet } from "@solana/wallet-adapter-react";
+import { MintSuccessModal } from '@/components/mint-success-modal';
 
-export interface ArtPiece {
-  id: number;
-  title: string;
-  image_url: string;
-  user_id: number;
-  created_at: string;
-  is_minted: boolean;
-  minted_nft_address?: string;
-  minted_token_uri?: string;
-  creator_wallet?: string;
-  owner_wallet?: string;
-}
+export type ArtPiece = Art;
 
 const sortOptions = [
   { value: 'recent', label: 'Most Recent' },
@@ -55,26 +46,64 @@ const item = {
   show: { opacity: 1, y: 0 }
 };
 
+const ITEMS_PER_PAGE = 12;
+
 export default function GalleryPage() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'my' | 'all'>('all');
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPiece, setSelectedPiece] = useState<ArtPiece | null>(null);
+  const [mintingArtId, setMintingArtId] = useState<number | null>(null);
+  const [mintedNFT, setMintedNFT] = useState<{
+    title: string;
+    image_url: string;
+    minted_nft_address: string;
+  } | null>(null);
+  const [page, setPage] = useState(1);
+  const loadingRef = useRef<HTMLDivElement>(null);
   
   const appState = useAppSelector((state: RootState) => state.appState);
-  const isUserLoggedIn = appState.isUserLoggedIn;
   const user = appState.user;
   const currentUserId = user?.id;
 
-  // Fetch data based on view mode
-  const { data: allArt = [], isLoading: isLoadingAll } = useGetAllArtQuery();
+  // Fetch data with pagination
+  const { 
+    data: artData, 
+    isLoading: isLoadingAll,
+    isFetching: isFetchingMore,
+    refetch: refetchArt 
+  } = useGetAllArtQuery({ 
+    page, 
+    limit: ITEMS_PER_PAGE 
+  });
+
   const { data: marketplaceListings = [] } = useGetListingsQuery();
 
+  // Intersection Observer for infinite scrolling
+  useEffect(() => {
+    if (!artData?.hasMore || isFetchingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadingRef.current) {
+      observer.observe(loadingRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [artData?.hasMore, isFetchingMore]);
+
   // Get the appropriate art pieces based on view mode
-  const artPieces = viewMode === 'my' && currentUserId 
-    ? allArt.filter(piece => piece.user_id === currentUserId)
-    : allArt;
+  const artPieces = viewMode === 'my' && currentUserId && artData?.data
+    ? artData.data.filter(piece => piece.user_id === currentUserId)
+    : artData?.data || [];
 
   // Apply filters and sorting
   const filteredArt = artPieces
@@ -92,8 +121,6 @@ export default function GalleryPage() {
       }
     });
 
-    console.log('asd => ',filteredArt);
-
   const handleArtSelect = (art: ArtPiece) => {
     setSelectedPiece(art);
   };
@@ -106,6 +133,98 @@ export default function GalleryPage() {
   // Handle view listing click
   const handleViewListing = (title: string) => {
     router.push(`/marketplace?search=${encodeURIComponent(title)}`);
+  };
+
+  const [mintNFT] = useMintNFTMutation();
+  const wallet = useWallet();
+
+  const handleMintNFT = async (e: React.MouseEvent, piece: ArtPiece) => {
+    e.stopPropagation();
+    
+    if (!wallet.connected || !wallet.publicKey) {
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your wallet to mint NFTs.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      setMintingArtId(piece.id);
+      toast({
+        title: 'Minting NFT',
+        description: 'Please approve the transaction in your wallet...',
+        variant: 'loading'
+      });
+
+      const result = await mintNFT({ 
+        artId: piece.id,
+        wallet: {
+          ...wallet,
+          publicKey: wallet.publicKey,
+          signTransaction: wallet.signTransaction,
+          signAllTransactions: wallet.signAllTransactions,
+        }
+      }).unwrap();
+
+      console.log('Minting response:', result);
+
+      // Immediately refetch the data after successful minting to get the updated NFT address
+      const refetchResult = await refetchArt();
+      
+      // Get the updated art piece with the NFT address
+      const updatedArtPieces = refetchResult.data?.data || [];
+      const updatedArt = updatedArtPieces.find(art => art.id === piece.id);
+      
+      if (updatedArt?.minted_nft_address) {
+        setMintedNFT({
+          title: updatedArt.title,
+          image_url: updatedArt.image_url,
+          minted_nft_address: updatedArt.minted_nft_address
+        });
+
+        // Clear the loading toast
+        toast({
+          title: 'NFT Minted Successfully',
+          description: 'Your artwork has been minted as an NFT!',
+          variant: 'default'
+        });
+      } else {
+        console.error('NFT minted but address not yet available. Initial response:', result, 'Updated art:', updatedArt);
+        // Still show success but with a note about the address
+        setMintedNFT({
+          title: result.art.title,
+          image_url: result.art.image_url,
+          minted_nft_address: 'Address will be available shortly...'
+        });
+
+        toast({
+          title: 'NFT Minted Successfully',
+          description: 'Your NFT address will be available shortly.',
+          variant: 'default'
+        });
+      }
+    } catch (err: unknown) {
+      console.error('Minting error:', err);
+      
+      const error = err as { data?: { message?: string } };
+      const errorMessage = error?.data?.message?.includes('insufficient funds')
+        ? 'Insufficient SOL balance. Please add more SOL to your wallet.'
+        : error?.data?.message || 'Failed to mint NFT. Please try again.';
+      
+      toast({
+        title: 'Minting Failed',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+    } finally {
+      setMintingArtId(null);
+    }
+  };
+
+  const handleSuccessModalClose = () => {
+    setMintedNFT(null);
   };
 
   return (
@@ -200,28 +319,18 @@ export default function GalleryPage() {
             variants={container}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
           >
-            {isLoadingAll ? (
-              <motion.div 
-                variants={item}
-                className="col-span-full text-center py-24"
-              >
-                <div className="animate-spin w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full mx-auto mb-4" />
-                <p className="text-gray-400">Loading art pieces...</p>
-              </motion.div>
-            ) : viewMode === 'my' && !isUserLoggedIn ? (
-              <motion.div
-                variants={item}
-                className="col-span-full text-center py-24"
-              >
-                <Wallet className="w-12 h-12 text-purple-400 mx-auto mb-6" />
-                <h2 className="text-xl font-medium text-gray-200 mb-3">Connect Your Wallet</h2>
-                <p className="text-sm text-gray-400 mb-6">
-                  Connect your wallet to view your personal art collection
-                </p>
-              </motion.div>
-            ) : filteredArt.length === 0 ? (
+            {isLoadingAll && page === 1 ? (
+              // Initial loading state
+              Array.from({ length: 8 }).map((_, index) => (
+                <motion.div
+                  key={index}
+                  variants={item}
+                  className="aspect-square rounded-xl bg-gray-900/50 backdrop-blur-sm border border-gray-800 animate-pulse"
+                />
+              ))
+            ) : !artData?.data || (filteredArt.length === 0 && page === 1) ? (
               <motion.div 
                 variants={item}
                 className="col-span-full text-center py-24"
@@ -237,121 +346,157 @@ export default function GalleryPage() {
                 </Button>
               </motion.div>
             ) : (
-              filteredArt.map((piece) => (
-                <motion.div
-                  key={piece.id}
-                  variants={item}
-                  className="group relative rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer"
-                  onClick={() => handleArtSelect(piece)}
-                >
-                  <div className="relative aspect-square">
-                    <Image
-                      src={piece.image_url}
-                      alt={piece.title}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                    <div className="absolute top-2 right-2 flex flex-col gap-2">
-                      {piece.is_minted && (
-                        <div className="flex items-center gap-1 bg-purple-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-purple-500/30">
-                          <Sparkles className="h-3 w-3 text-purple-300" />
-                          <span className="text-[10px] text-purple-300">NFT</span>
-                        </div>
-                      )}
-                      {isArtListed(piece.id) && (
-                        <div className="flex items-center gap-1 bg-green-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-green-500/30">
-                          <Tag className="h-3 w-3 text-green-300" />
-                          <span className="text-[10px] text-green-300">Listed</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    {currentUserId && piece.user_id === currentUserId && (
-                      <>
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-3">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(piece.image_url, '_blank');
-                            }}
-                            className="h-8 w-8 bg-gray-900/50 hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 border border-gray-800 hover:border-purple-500/30"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push('/chat');
-                            }}
-                            className="h-8 w-8 bg-gray-900/50 hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 border border-gray-800 hover:border-purple-500/30"
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        {!piece.is_minted && (
-                          <div className="absolute bottom-12 left-0 right-0 flex justify-center">
-                            <Button
-                              variant="secondary"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toast({
-                                  title: 'Preparing NFT',
-                                  description: 'Starting the minting process...',
-                                  variant: 'loading'
-                                });
-                                // TODO: Add NFT minting logic
-                              }}
-                              className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
-                            >
-                              <Sparkles className="h-4 w-4 mr-2" />
-                              Mint as NFT
-                            </Button>
+              <>
+                {/* Art Grid Items */}
+                {filteredArt.map((piece) => (
+                  <motion.div
+                    key={piece.id}
+                    variants={item}
+                    className={cn(
+                      "group relative rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer",
+                      mintingArtId === piece.id && "border-purple-500/20"
+                    )}
+                    onClick={() => handleArtSelect(piece)}
+                  >
+                    <div className="relative aspect-square">
+                      <Image
+                        src={piece.image_url}
+                        alt={piece.title}
+                        fill
+                        className={cn(
+                          "object-cover",
+                          mintingArtId === piece.id && "opacity-50 blur-sm transition-all duration-300"
+                        )}
+                        unoptimized
+                      />
+                      <div className="absolute top-2 right-2 flex flex-col gap-2">
+                        {piece.is_minted && (
+                          <div className="flex items-center gap-1 bg-purple-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-purple-500/30">
+                            <Sparkles className="h-3 w-3 text-purple-300" />
+                            <span className="text-[10px] text-purple-300">NFT</span>
                           </div>
                         )}
-                      </>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-gray-100">{piece.title}</h3>
                         {isArtListed(piece.id) && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewListing(piece.title);
-                            }}
-                            className="h-7 bg-green-500/20 hover:bg-green-500/30 text-green-300 text-xs"
-                          >
-                            <Tag className="h-3 w-3 mr-1" />
-                            View Listing
-                          </Button>
+                          <div className="flex items-center gap-1 bg-green-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-green-500/30">
+                            <Tag className="h-3 w-3 text-green-300" />
+                            <span className="text-[10px] text-green-300">Listed</span>
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-400">
-                          {format(new Date(piece.created_at), 'MMM d, yyyy')}
-                        </p>
-                        <p className="text-xs text-purple-300/80">
-                          {piece.creator_wallet ? 
-                            `${piece.creator_wallet.slice(0, 4)}...${piece.creator_wallet.slice(-4)}` : 
-                            'No wallet linked'
-                          }
-                        </p>
-                      </div>
                     </div>
+                    <div className={cn(
+                      "absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+                      mintingArtId === piece.id && "opacity-100"
+                    )}>
+                      {mintingArtId === piece.id ? (
+                        // Minting State
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <Loader2 className="h-8 w-8 animate-spin text-purple-400 mb-3" />
+                          <p className="text-sm text-purple-200 mb-2">Minting NFT</p>
+                          <p className="text-xs text-purple-200/70 px-4 text-center">{piece.title}</p>
+                        </div>
+                      ) : (
+                        // Normal State
+                        <>
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-3">
+                            {currentUserId && piece.user_id === currentUserId && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(piece.image_url, '_blank');
+                                  }}
+                                  className="h-8 w-8 bg-gray-900/50 hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 border border-gray-800 hover:border-purple-500/30"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push('/chat');
+                                  }}
+                                  className="h-8 w-8 bg-gray-900/50 hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 border border-gray-800 hover:border-purple-500/30"
+                                >
+                                  <MessageSquare className="h-4 w-4" />
+                                </Button>
+                                {!piece.is_minted && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => handleMintNFT(e, piece)}
+                                    disabled={mintingArtId === piece.id}
+                                    className="h-8 w-8 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 hover:text-purple-200 border border-purple-500/30 hover:border-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <Sparkles className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            {isArtListed(piece.id) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewListing(piece.title);
+                                }}
+                                className="h-8 w-8 bg-green-500/20 hover:bg-green-500/30 text-green-300 hover:text-green-200 border border-green-500/30 hover:border-green-500/50"
+                              >
+                                <Tag className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="text-sm font-medium text-gray-100">{piece.title}</h3>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-400">
+                                {format(new Date(piece.created_at), 'MMM d, yyyy')}
+                              </p>
+                              <p className="text-xs text-purple-300/80">
+                                {piece.creator_wallet ? 
+                                  `${piece.creator_wallet.slice(0, 4)}...${piece.creator_wallet.slice(-4)}` : 
+                                  'No wallet linked'
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+
+                {/* Loading More Indicator */}
+                {artData?.hasMore && (
+                  <div 
+                    ref={loadingRef} 
+                    className="col-span-full flex justify-center py-8"
+                  >
+                    {isFetchingMore && (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                        <span className="text-sm text-purple-300">Loading more art...</span>
+                      </div>
+                    )}
                   </div>
-                </motion.div>
-              ))
+                )}
+              </>
             )}
           </motion.div>
         </div>
+
+        {/* Success Modal */}
+        <MintSuccessModal
+          isOpen={!!mintedNFT}
+          onClose={handleSuccessModalClose}
+          nftData={mintedNFT}
+        />
 
         {/* Art Details Modal */}
         <ArtDetailsModal

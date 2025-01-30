@@ -3,13 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 // Define database types
 export interface Art {
   id: number;
-  userId: number;
+  user_id: number;
   title: string;
-  imageUrl: string;
-  createdAt: string;
-  mintedNftAddress?: string;
-  mintedTokenUri?: string;
-  isMinted: boolean;
+  image_url: string;
+  created_at: string;
+  minted_nft_address?: string;
+  minted_token_uri?: string;
+  is_minted: boolean;
+  creator_wallet?: string;
+  owner_wallet?: string;
 }
 
 export interface MarketplaceListing {

@@ -5,7 +5,7 @@ import { Metaplex, walletAdapterIdentity, WalletAdapter } from '@metaplex-founda
 import { baseQueryWithOnQueryStarted } from './api.utils';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 
-interface MintNFTResponse {
+export interface MintNFTResponse {
   art: Art;
   metadata: {
     name: string;

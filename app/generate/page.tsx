@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useGenerateArtMutation, useGetUserCreditsQuery } from '@/redux/services/art.service';
 import { Button } from '@/components/ui/button';
-import { Loader2, Download, Share2, RefreshCcw, Coins, Wallet, Sparkles } from 'lucide-react';
+import { Loader2, Download, Share2, RefreshCcw, Coins, Wallet, Image as ImageIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RootLayout } from '@/components/root-layout';
 import { motion } from 'framer-motion';
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useAppSelector } from '@/redux/store';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 // Cost constants
 const GENERATION_COST = 5; // credits per generation
@@ -34,9 +35,10 @@ const styles = [
 ];
 
 export default function GeneratePage() {
+  const router = useRouter();
   const [prompt, setPrompt] = useState('');
   const [images, setImages] = useState<GeneratedImage[]>([]);
-  const [generateArt] = useGenerateArtMutation();
+  const [generateArt, { isLoading: isGenerating }] = useGenerateArtMutation();
   const { data: credits, isLoading: isLoadingCredits } = useGetUserCreditsQuery();
   const [intensity, setIntensity] = useState([50]);
   const [style, setStyle] = useState('knights');
@@ -219,13 +221,13 @@ export default function GeneratePage() {
 
                   <Button
                     onClick={handleGenerate}
-                    disabled={isLoadingCredits || !prompt.trim()}
-                    className="w-full bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20"
+                    disabled={isLoadingCredits || !prompt.trim() || isGenerating}
+                    className="w-full bg-purple-500 hover:bg-purple-600 text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isLoadingCredits ? (
+                    {isGenerating ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
+                        Creating Masterpiece...
                       </>
                     ) : (
                       'Generate Pixel Art'
@@ -295,21 +297,14 @@ export default function GeneratePage() {
                               <RefreshCcw className="h-4 w-4" />
                             </Button>
                           </div>
-                          <div className="absolute bottom-40 left-0 right-0 flex justify-center">
+                          <div className="absolute bottom-6 left-0 right-0 flex justify-center">
                             <Button
                               variant="secondary"
-                              onClick={() => {
-                                toast({
-                                  title: 'Preparing NFT',
-                                  description: 'Starting the minting process...',
-                                  variant: 'loading'
-                                });
-                                // TODO: Add NFT minting logic
-                              }}
-                              className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
+                              onClick={() => router.push('/gallery')}
+                              className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50 shadow-lg shadow-purple-500/20"
                             >
-                              <Sparkles className="h-4 w-4 mr-2" />
-                              Mint as NFT
+                              <ImageIcon className="h-4 w-4 mr-2" />
+                              See in Gallery
                             </Button>
                           </div>
                         </div>
