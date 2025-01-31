@@ -341,13 +341,6 @@ export default function GalleryPage() {
                 <p className="text-sm text-gray-400 mb-6">
                   Connect your wallet to view and manage your pixel art creations
                 </p>
-                <Button 
-                  variant="outline"
-                  className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border-purple-500/20 hover:border-purple-500/30"
-                  onClick={() => router.push('/auth')}
-                >
-                  Connect Wallet
-                </Button>
               </motion.div>
             ) : !artData?.data || (filteredArt.length === 0 && page === 1) ? (
               <motion.div 

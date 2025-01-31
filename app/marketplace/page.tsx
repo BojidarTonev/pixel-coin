@@ -174,9 +174,6 @@ export default function MarketplacePage() {
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const router = useRouter();
 
-  console.log('All listings from backend:', allListings);
-  console.log('Current user:', user);
-  console.log('View mode:', viewMode);
 
   // Get mintable art (minted but not listed)
   const listableArt = userArt
@@ -213,8 +210,6 @@ export default function MarketplacePage() {
         return b.price - a.price;
       }
     });
-
-  console.log('Final filtered and sorted listings:', filteredListings);
 
   const handlePurchase = async (listingId: number) => {
     try {
@@ -388,13 +383,6 @@ export default function MarketplacePage() {
                 <p className="text-sm text-gray-400 mb-6">
                   Connect your wallet to view your listings
                 </p>
-                <Button 
-                  variant="outline"
-                  className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border-purple-500/20 hover:border-purple-500/30"
-                  onClick={() => router.push('/auth')}
-                >
-                  Connect Wallet
-                </Button>
               </div>
             ) : filteredListings.length === 0 && viewMode === 'my' ? (
               <div className="col-span-full text-center py-24">
