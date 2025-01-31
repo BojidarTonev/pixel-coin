@@ -24,6 +24,7 @@ export interface MarketplaceListing {
     created_at: string;
     minted_nft_address: string;
     creator_wallet: string;
+    owner_wallet: string;
   };
   price: number;
   created_at: string;

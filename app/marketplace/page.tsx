@@ -58,17 +58,17 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
 
   return (
     <Dialog open={!!listing} onOpenChange={() => onClose()}>
-      <DialogContent className="bg-gray-900/95 border-gray-800 p-0 max-w-2xl">
-        <div className="relative">
+      <DialogContent className="bg-gray-900/95 border-gray-800 p-0 max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="relative flex-1 overflow-y-auto">
           <div className="relative aspect-square">
-          <Image
-            src={listing.art.image_url}
-            alt={listing.art.title}
-            fill
-            className="object-cover"
-            unoptimized
-          />
-        </div>
+            <Image
+              src={listing.art.image_url}
+              alt={listing.art.title}
+              fill
+              className="object-cover"
+              unoptimized
+            />
+          </div>
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-medium text-gray-100">{listing.art.title}</h2>
@@ -109,16 +109,28 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-800">
+                <span className="text-sm text-gray-400">Current Owner</span>
+                <a
+                  href={`https://explorer.solana.com/address/${listing.art.creator_wallet}?cluster=devnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-purple-300 hover:text-purple-200 flex items-center gap-1"
+                >
+                  {listing.art.owner_wallet.slice(0, 4)}...{listing.art.owner_wallet.slice(-4)}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
             </div>
 
-          {!isOwner && (
-              <div className="flex gap-4">
-            <Button
+            {!isOwner && (
+              <div className="flex gap-4 sticky bottom-0 bg-gray-900/95 py-4 border-t border-gray-800">
+                <Button
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300"
                   onClick={onClose}
-            >
+                >
                   Cancel
-            </Button>
+                </Button>
                 <Button
                   className="flex-1 bg-purple-500 hover:bg-purple-600 text-white"
                   onClick={handlePurchaseClick}
@@ -127,8 +139,8 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
                   Buy Now for {listing.price} SOL
                 </Button>
               </div>
-          )}
-        </div>
+            )}
+          </div>
         </div>
       </DialogContent>
 
