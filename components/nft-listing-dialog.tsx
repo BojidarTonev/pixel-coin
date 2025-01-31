@@ -1,12 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Wallet, ArrowRight, Search, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import { format } from 'date-fns';
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
@@ -16,7 +13,7 @@ interface NFT {
   title: string;
   image_url: string;
   created_at: string;
-  minted_nft_address: string;
+  minted_nft_address?: string;
 }
 
 interface NFTListingDialogProps {
@@ -36,7 +33,7 @@ export function NFTListingDialog({
 }: NFTListingDialogProps) {
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
   const [price, setPrice] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
+  // const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
   const handleList = () => {
@@ -45,9 +42,9 @@ export function NFTListingDialog({
     }
   };
 
-  const filteredNFTs = nfts.filter(nft => 
-    nft.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // const filteredNFTs = nfts.filter(nft => 
+  //   nft.title.toLowerCase().includes(searchQuery.toLowerCase())
+  // );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -63,7 +60,7 @@ export function NFTListingDialog({
           <div className="text-center py-8">
             <h3 className="text-lg font-medium text-gray-200 mb-2">No Art Available</h3>
             <p className="text-sm text-gray-400 mb-4">
-              You don't have any unminted art pieces available to list.
+              You don&rsquo;t have any unminted art pieces available to list.
               Generate some art first!
             </p>
             <Button

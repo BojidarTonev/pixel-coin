@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils';
 import { NFTListingDialog } from '@/components/nft-listing-dialog';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { MarketplaceListing } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 
 const sortOptions = [
   { value: 'recent', label: 'Most Recent' },
@@ -172,7 +171,6 @@ export default function MarketplacePage() {
   const { isUserLoggedIn, user } = useAppSelector(state => state.appState);
   const currentUserId = user?.id;
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
-  const router = useRouter();
 
 
   // Get mintable art (unminted art owned by current user)
