@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, MessageSquare, Sparkles, Loader2, ShoppingBag } from "lucide-react";
@@ -27,8 +28,8 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
   const wallet = useWallet();
   
   // Get listings to check if this NFT is already listed
-  const { data: listings = [] } = useGetListingsQuery();
-  const isListed = art?.is_minted && listings.some(listing => listing.nftAddress === art.minted_nft_address);
+  const { data: listings = { data: [], hasMore: false, total: 0 } } = useGetListingsQuery({});
+  const isListed = art?.is_minted && listings.data.some((listing: any) => listing.nftAddress === art.minted_nft_address);
 
   if (!art) return null;
 
@@ -102,7 +103,7 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
   };
 
   const handleViewListing = () => {
-    const listing = listings.find(l => l.nftAddress === art?.minted_nft_address);
+    const listing = listings.data?.find((l: any) => l.nftAddress === art?.minted_nft_address);
     if (listing) {
       router.push(`/marketplace/${listing.id}`);
     }

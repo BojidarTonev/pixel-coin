@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { Connection, PublicKey } from '@solana/web3.js';
-import { Metaplex } from '@metaplex-foundation/js';
+// import { Connection, PublicKey } from '@solana/web3.js';
+// import { Metaplex } from '@metaplex-foundation/js';
 
 export async function POST(
   request: Request,
@@ -44,11 +44,11 @@ export async function POST(
     }
 
     // Initialize Solana connection
-    const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL!);
-    const metaplex = new Metaplex(connection);
+    // const connection = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC_URL!);
+    // const metaplex = new Metaplex(connection);
 
     // Transfer NFT ownership
-    const nft = await metaplex.nfts().findByMint({ mintAddress: new PublicKey(listing.nft_address) });
+    // const nft = await metaplex.nfts().findByMint({ mintAddress: new PublicKey(listing.nft_address) });
     
     // Update listing status
     const { error: updateListingError } = await supabase

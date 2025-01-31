@@ -51,7 +51,10 @@ export const artApi = createApi({
       serializeQueryArgs: ({ endpointName }) => {
         return endpointName;
       },
-      merge: (currentCache, newItems) => {
+      merge: (currentCache, newItems, { arg: { page } }) => {
+        if (page === 1) {
+          return newItems;
+        }
         if (currentCache && newItems) {
           return {
             ...newItems,

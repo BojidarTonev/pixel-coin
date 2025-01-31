@@ -14,18 +14,15 @@ export interface MintNFTResponse {
   };
 }
 
-interface MarketplaceListing {
-  id: number;
-  user_id: number;
-  art: {
-    id: number;
-    title: string;
-    image_url: string;
-    created_at: string;
-  };
-  price: number;
-  created_at: string;
-  status: 'active' | 'sold';
+export interface PaginatedResponse<T> {
+  data: T[];
+  hasMore: boolean;
+  total: number;
+}
+
+export interface GetListingsParams {
+  page?: number;
+  limit?: number;
 }
 
 export const nftApi = createApi({
@@ -147,10 +144,10 @@ export const nftApi = createApi({
       invalidatesTags: ['Listings']
     }),
 
-    getListings: builder.query<MarketplaceListing[], void>({
-      query: () => ({
+    getListings: builder.query<PaginatedResponse<MarketplaceListing>, GetListingsParams>({
+      query: ({ page = 1, limit = 12 } = {}) => ({
         url: '/marketplace/listings',
-        method: 'GET'
+        params: { page, limit }
       }),
       providesTags: ['Listings']
     }),

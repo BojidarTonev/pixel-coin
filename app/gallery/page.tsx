@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { RootLayout } from '@/components/root-layout';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Download, Search, Filter, MessageSquare, Sparkles, Tag, Loader2 } from 'lucide-react';
+import { Download, Search, Filter, MessageSquare, Sparkles, Tag, Loader2, Wallet } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -66,7 +66,6 @@ export default function GalleryPage() {
   const appState = useAppSelector((state: RootState) => state.appState);
   const user = appState.user;
   const currentUserId = user?.id;
-  const isUserLoggedIn = !!user;
 
   // Fetch data with pagination
   const { 
@@ -77,26 +76,9 @@ export default function GalleryPage() {
   } = useGetAllArtQuery({ 
     page, 
     limit: ITEMS_PER_PAGE 
-  }, {
-    // Disable automatic re-fetching when window regains focus
-    refetchOnFocus: false,
-    // Merge the new data with existing data
-    serializeQueryArgs: ({ endpointName }) => {
-      return endpointName;
-    },
-    merge: (currentCache, newItems) => {
-      if (!currentCache) return newItems;
-      return {
-        ...newItems,
-        data: [...currentCache.data, ...newItems.data],
-      };
-    },
-    forceRefetch({ currentArg, previousArg }) {
-      return currentArg !== previousArg;
-    },
   });
 
-  const { data: marketplaceListings = [] } = useGetListingsQuery();
+  const { data: listingsData = { data: [], hasMore: false, total: 0 } } = useGetListingsQuery({});
 
   // Intersection Observer for infinite scrolling
   useEffect(() => {
@@ -145,7 +127,7 @@ export default function GalleryPage() {
 
   // Check if art piece is listed in marketplace
   const isArtListed = (artId: number) => {
-    return marketplaceListings.some(listing => listing.art.id === artId && listing.status === 'active');
+    return listingsData.data?.some(listing => listing.art.id === artId && listing.status === 'active');
   };
 
   // Handle view listing click
@@ -348,6 +330,25 @@ export default function GalleryPage() {
                   className="aspect-square rounded-xl bg-gray-900/50 backdrop-blur-sm border border-gray-800 animate-pulse"
                 />
               ))
+            ) : viewMode === 'my' && !currentUserId ? (
+              // Not logged in state for My Creations
+              <motion.div 
+                variants={item}
+                className="col-span-full text-center py-24"
+              >
+                <Wallet className="w-12 h-12 text-purple-400 mx-auto mb-6" />
+                <h2 className="text-xl font-medium text-gray-200 mb-3">Connect Your Wallet</h2>
+                <p className="text-sm text-gray-400 mb-6">
+                  Connect your wallet to view and manage your pixel art creations
+                </p>
+                <Button 
+                  variant="outline"
+                  className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border-purple-500/20 hover:border-purple-500/30"
+                  onClick={() => router.push('/auth')}
+                >
+                  Connect Wallet
+                </Button>
+              </motion.div>
             ) : !artData?.data || (filteredArt.length === 0 && page === 1) ? (
               <motion.div 
                 variants={item}

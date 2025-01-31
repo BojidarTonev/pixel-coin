@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // Get all active listings with art details
     const { data: listings, error } = await supabase
@@ -82,9 +82,21 @@ export async function GET() {
       .eq('status', 'active')
       .order('created_at', { ascending: false });
 
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '12');
+    const offset = (page - 1) * limit;
+
+    const { count } = await supabase
+      .from('marketplace_listings')
+      .select('*', { count: 'exact', head: true });
     if (error) throw error;
 
-    return NextResponse.json(listings);
+    return NextResponse.json({
+      data: listings,
+      hasMore: offset + limit < (count || 0),
+      total: count
+    });
   } catch (error) {
     console.error('Get listings error:', error);
     return NextResponse.json(

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState } from 'react';
@@ -22,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { NFTListingDialog } from '@/components/nft-listing-dialog';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { MarketplaceListing } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 const sortOptions = [
   { value: 'recent', label: 'Most Recent' },
@@ -163,17 +165,22 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddListingOpen, setIsAddListingOpen] = useState(false);
-  const { data: allListings = [], isLoading: isLoadingAll } = useGetListingsQuery();
+  const { data: allListings = { data: [], hasMore: false, total: 0 }, isLoading: isLoadingAll } = useGetListingsQuery({});
   const { data: userArt = [] } = useGetUserArtQuery();
   const [purchaseListing] = usePurchaseListingMutation();
   const [createListing] = useCreateListingMutation();
   const { isUserLoggedIn, user } = useAppSelector(state => state.appState);
   const currentUserId = user?.id;
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
+  const router = useRouter();
+
+  console.log('All listings from backend:', allListings);
+  console.log('Current user:', user);
+  console.log('View mode:', viewMode);
 
   // Get mintable art (minted but not listed)
   const listableArt = userArt
-    .filter(art => art.is_minted && art.minted_nft_address && !allListings.some(listing => listing.art.id === art.id))
+    .filter(art => art.is_minted && art.minted_nft_address && !allListings.data?.some(listing => listing.art.id === art.id))
     .map(art => ({
       id: art.id,
       title: art.title,
@@ -185,13 +192,13 @@ export default function MarketplacePage() {
 
   // Get the appropriate listings based on view mode
   const listings = viewMode === 'my' && currentUserId
-    ? allListings.filter(listing => listing.user_id === currentUserId)
-    : allListings;
-  const isLoading = viewMode === 'my' ? isLoadingAll : isLoadingAll;
+    ? (allListings.data || []).filter((listing: MarketplaceListing) => listing.user_id === currentUserId)
+    : (allListings.data || []);
+
+  console.log('Filtered listings:', listings);
 
   // Filter and sort listings
-  const filteredListings = listings
-    .filter(listing => {
+  const filteredListings = (listings || []).filter((listing: MarketplaceListing) => {
       if (searchQuery) {
         return listing.art.title.toLowerCase().includes(searchQuery.toLowerCase());
       }
@@ -206,6 +213,8 @@ export default function MarketplacePage() {
         return b.price - a.price;
       }
     });
+
+  console.log('Final filtered and sorted listings:', filteredListings);
 
   const handlePurchase = async (listingId: number) => {
     try {
@@ -367,26 +376,42 @@ export default function MarketplacePage() {
 
           {/* Listings Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {isLoading ? (
+            {isLoadingAll ? (
               <div className="col-span-full text-center py-24">
                 <div className="animate-spin w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full mx-auto mb-4" />
                 <p className="text-gray-400">Loading listings...</p>
               </div>
-            ) : !isUserLoggedIn ? (
+            ) : viewMode === 'my' && !isUserLoggedIn ? (
               <div className="col-span-full text-center py-24">
                 <Wallet className="w-12 h-12 text-purple-400 mx-auto mb-6" />
                 <h2 className="text-xl font-medium text-gray-200 mb-3">Connect Your Wallet</h2>
                 <p className="text-sm text-gray-400 mb-6">
-                  Connect your wallet to start buying and selling NFTs
+                  Connect your wallet to view your listings
                 </p>
+                <Button 
+                  variant="outline"
+                  className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border-purple-500/20 hover:border-purple-500/30"
+                  onClick={() => router.push('/auth')}
+                >
+                  Connect Wallet
+                </Button>
               </div>
-            ) : viewMode === 'my' && filteredListings.length === 0 ? (
+            ) : filteredListings.length === 0 && viewMode === 'my' ? (
               <div className="col-span-full text-center py-24">
                 <Plus className="w-12 h-12 text-purple-400 mx-auto mb-6" />
                 <h2 className="text-xl font-medium text-gray-200 mb-3">No Listings Found</h2>
                 <p className="text-sm text-gray-400 mb-6">
                   You haven&apos;t listed any NFTs for sale yet
                 </p>
+                {isUserLoggedIn && (
+                  <Button
+                    onClick={() => setIsAddListingOpen(true)}
+                    className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Listing
+                  </Button>
+                )}
               </div>
             ) : filteredListings.length === 0 ? (
               <div className="col-span-full text-center py-24">
@@ -401,7 +426,7 @@ export default function MarketplacePage() {
                       key={listing.id}
                       variants={item}
                       className="group relative rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer"
-                      onClick={() => setSelectedListing(listing)}
+                      onClick={() => setSelectedListing(listing as any)}
                     >
                       <div className="relative aspect-square">
                         <Image
