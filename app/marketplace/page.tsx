@@ -175,17 +175,22 @@ export default function MarketplacePage() {
   const router = useRouter();
 
 
-  // Get mintable art (minted but not listed)
+  // Get mintable art (unminted art owned by current user)
   const listableArt = userArt
-    .filter(art => art.is_minted && art.minted_nft_address && !allListings.data?.some(listing => listing.art.id === art.id))
+    .filter(art => 
+      art.user_id === currentUserId && // Only user's own art
+      !art.is_minted && // Not minted yet
+      !allListings.data?.some(listing => listing.art.id === art.id) // Not listed
+    )
     .map(art => ({
       id: art.id,
       title: art.title,
       image_url: art.image_url,
       created_at: art.created_at,
       minted_nft_address: art.minted_nft_address
-    }))
-    .filter((art): art is typeof art & { minted_nft_address: string } => art.minted_nft_address !== undefined);
+    }));
+
+  console.log('Listable art:', listableArt);
 
   // Get the appropriate listings based on view mode
   const listings = viewMode === 'my' && currentUserId

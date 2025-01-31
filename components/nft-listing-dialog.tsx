@@ -1,12 +1,15 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Wallet, ArrowRight, Search } from 'lucide-react';
+import { X, Wallet, ArrowRight, Search, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
 
 interface NFT {
   id: number;
@@ -34,6 +37,7 @@ export function NFTListingDialog({
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
   const [price, setPrice] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
 
   const handleList = () => {
     if (selectedNFT && price && !isNaN(parseFloat(price))) {
@@ -47,123 +51,106 @@ export function NFTListingDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl bg-gray-900/95 border-gray-800 p-0 overflow-hidden">
-        <div className="relative">
-          {/* Close Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="absolute right-4 top-4 z-50 text-gray-400 hover:text-gray-300"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+      <DialogContent className="bg-gray-900/95 border-gray-800 p-6 max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-medium text-gray-100">List NFT for Sale</DialogTitle>
+          <DialogDescription className="text-sm text-gray-400">
+            Choose an art piece to list on the marketplace
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="p-6">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h2 className="text-xl font-medium text-gray-100 mb-2">List NFT for Sale</h2>
-              <p className="text-sm text-gray-400">
-                Select an NFT from your collection to list on the marketplace
-              </p>
-            </div>
-
-            {/* Search */}
-            <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <Input
-                type="text"
-                placeholder="Search by title..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-gray-900/50 border-gray-800 text-gray-300 placeholder:text-gray-500"
-              />
-            </div>
-
-            {/* NFT Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto mb-6 pr-2 custom-scrollbar">
-              {filteredNFTs.map((nft) => (
-                <motion.div
-                  key={nft.id}
-                  layoutId={`nft-${nft.id}`}
-                  className={cn(
-                    "relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition-all duration-300",
-                    selectedNFT?.id === nft.id
-                      ? "border-purple-500 shadow-lg shadow-purple-500/20"
-                      : "border-gray-800 hover:border-purple-500/50"
-                  )}
-                  onClick={() => setSelectedNFT(nft)}
+        {nfts.length === 0 ? (
+          <div className="text-center py-8">
+            <h3 className="text-lg font-medium text-gray-200 mb-2">No Art Available</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              You don't have any unminted art pieces available to list.
+              Generate some art first!
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/generate')}
+              className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border-purple-500/20 hover:border-purple-500/30"
+            >
+              Generate Art
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-4 my-4">
+              <div className="space-y-2">
+                <Label htmlFor="nft">Select Art</Label>
+                <Select
+                  value={selectedNFT?.id.toString()}
+                  onValueChange={(value) => setSelectedNFT(nfts.find(nft => nft.id.toString() === value) || null)}
                 >
+                  <SelectTrigger className="bg-gray-900/50 border-gray-800 text-gray-300">
+                    <SelectValue placeholder="Choose an art piece" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900/95 border-gray-800">
+                    {nfts.map((nft) => (
+                      <SelectItem
+                        key={nft.id}
+                        value={nft.id.toString()}
+                        className="text-gray-300 focus:bg-purple-500/20 focus:text-purple-300"
+                      >
+                        {nft.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedNFT && (
+                <div className="relative aspect-square rounded-lg overflow-hidden border border-gray-800">
                   <Image
-                    src={nft.image_url}
-                    alt={nft.title}
+                    src={selectedNFT.image_url}
+                    alt={selectedNFT.title}
                     fill
                     className="object-cover"
                     unoptimized
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute bottom-2 left-2 right-2">
-                      <p className="text-xs font-medium text-gray-100 truncate">{nft.title}</p>
-                      <p className="text-xs text-gray-400">
-                        {format(new Date(nft.created_at), 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="price">Price (SOL)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="bg-gray-900/50 border-gray-800 text-gray-300"
+                />
+              </div>
             </div>
 
-            {/* Price Input and List Button */}
-            <AnimatePresence>
-              {selectedNFT && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-4"
-                >
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <label className="block text-sm text-gray-400 mb-2">
-                        Price (SOL)
-                      </label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        className="bg-gray-900/50 border-gray-800 text-gray-300"
-                        placeholder="Enter price in SOL"
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <Button
-                        onClick={handleList}
-                        disabled={!price || isLoading}
-                        className="bg-purple-500 hover:bg-purple-600 text-white"
-                      >
-                        {isLoading ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            <span>Processing...</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Wallet className="h-4 w-4" />
-                            <span>List for Sale</span>
-                            <ArrowRight className="h-4 w-4" />
-                          </div>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={onClose}
+                className="bg-gray-800 hover:bg-gray-700 text-gray-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleList}
+                disabled={!selectedNFT || !price || isLoading}
+                className="bg-purple-500 hover:bg-purple-600 text-white disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating Listing...
+                  </>
+                ) : (
+                  'Create Listing'
+                )}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

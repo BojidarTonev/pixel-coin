@@ -99,7 +99,7 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
   };
 
   const handleListForSale = () => {
-    router.push(`/marketplace/list/${art?.id}`);
+    router.push(`/marketplace`);
   };
 
   const handleViewListing = () => {
@@ -108,6 +108,8 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
       router.push(`/marketplace/${listing.id}`);
     }
   };
+
+  console.log('Art details modal:', art);
 
   return (
     <Dialog open={!!art} onOpenChange={() => onClose()}>
@@ -133,20 +135,37 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <span>Created on {format(new Date(art.created_at), 'MMMM d, yyyy')}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">Creator:</span>
-              {art.creator_wallet ? (
-                <a
-                  href={`https://explorer.solana.com/address/${art.creator_wallet}?cluster=devnet`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-purple-300 hover:text-purple-200 transition-colors"
-                >
-                  {art.creator_wallet.slice(0, 4)}...{art.creator_wallet.slice(-4)}
-                </a>
-              ) : (
-                <span className="text-xs text-gray-500">No wallet linked</span>
-              )}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Creator:</span>
+                {art.creator_wallet ? (
+                  <a
+                    href={`https://explorer.solana.com/address/${art.creator_wallet}?cluster=devnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-purple-300 hover:text-purple-200 transition-colors"
+                  >
+                    {art.creator_wallet.slice(0, 4)}...{art.creator_wallet.slice(-4)}
+                  </a>
+                ) : (
+                  <span className="text-xs text-gray-500">No wallet linked</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Owner:</span>
+                {art.owner_wallet ? (
+                  <a
+                    href={`https://explorer.solana.com/address/${art.owner_wallet}?cluster=devnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-purple-300 hover:text-purple-200 transition-colors"
+                  >
+                    {art.owner_wallet.slice(0, 4)}...{art.owner_wallet.slice(-4)}
+                  </a>
+                ) : (
+                  <span className="text-xs text-gray-500">No wallet linked</span>
+                )}
+              </div>
             </div>
             {art.is_minted && art.minted_nft_address && (
               <div className="flex items-center gap-2">
@@ -217,7 +236,7 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
                       className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 border border-purple-500/30 hover:border-purple-500/50"
                     >
                       <ShoppingBag className="h-4 w-4 mr-2" />
-                      List for Sale
+                      Go to Marketplace to list art
                     </Button>
                   )
                 ) : (
