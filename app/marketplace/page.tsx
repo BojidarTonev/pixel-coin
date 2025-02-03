@@ -15,14 +15,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format } from 'date-fns';
-import { useGetListingsQuery, usePurchaseListingMutation, useCreateListingMutation } from '@/redux/services/nft.service';
 import { useGetUserArtQuery } from '@/redux/services/art.service';
 import Image from 'next/image';
 import { useAppSelector } from '@/redux/store';
 import { cn } from '@/lib/utils';
 import { NFTListingDialog } from '@/components/nft-listing-dialog';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import type { MarketplaceListing } from '@/lib/supabase';
+import { PurchaseSuccessModal } from '@/components/purchase-success-modal';
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useExecutePurchaseMutation, useCreateListingMutation, useGetAllListingsQuery } from '@/redux/services/auctionHouse.service';
+import type { AuctionHouseListing } from '@/redux/services/auctionHouse.service';
 
 const sortOptions = [
   { value: 'recent', label: 'Most Recent' },
@@ -36,13 +38,20 @@ const item = {
 };
 
 interface ListingDetailsModalProps {
-  listing: MarketplaceListing | null;
+  listing: AuctionHouseListing | null;
   onClose: () => void;
-  onPurchase: (listingId: number) => void;
+  onPurchase: (listing: AuctionHouseListing) => void;
   isOwner: boolean;
+  isLoggedIn: boolean;
 }
 
-function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingDetailsModalProps) {
+const ListingDetailsModal: React.FC<ListingDetailsModalProps> = ({
+  listing,
+  onClose,
+  onPurchase,
+  isOwner,
+  isLoggedIn
+}) => {
   const [isConfirmingPurchase, setIsConfirmingPurchase] = useState(false);
 
   if (!listing) return null;
@@ -52,7 +61,7 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
   };
 
   const handleConfirmPurchase = () => {
-    onPurchase(listing.id);
+    onPurchase(listing);
     setIsConfirmingPurchase(false);
   };
 
@@ -62,8 +71,8 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
         <div className="relative flex-1 overflow-y-auto">
           <div className="relative aspect-square">
             <Image
-              src={listing.art.image_url}
-              alt={listing.art.title}
+              src={listing.uri}
+              alt={listing.name}
               fill
               className="object-cover"
               unoptimized
@@ -71,7 +80,7 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
           </div>
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-medium text-gray-100">{listing.art.title}</h2>
+              <h2 className="text-xl font-medium text-gray-100">{listing.name}</h2>
               <div className="flex items-center gap-2 bg-purple-500/20 px-3 py-1.5 rounded-lg">
                 <Tag className="h-4 w-4 text-purple-300" />
                 <span className="text-sm text-purple-300">{listing.price} SOL</span>
@@ -82,48 +91,36 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
               <div className="flex items-center justify-between py-2 border-b border-gray-800">
                 <span className="text-sm text-gray-400">Listed On</span>
                 <span className="text-sm text-gray-200">
-                  {format(new Date(listing.created_at), 'MMMM d, yyyy')}
+                  {format(new Date(listing.createdAt), 'MMMM d, yyyy')}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-gray-800">
-                <span className="text-sm text-gray-400">NFT Address</span>
+                <span className="text-sm text-gray-400">Seller</span>
                 <a
-                  href={`https://explorer.solana.com/address/${listing.art.minted_nft_address}?cluster=devnet`}
+                  href={`https://explorer.solana.com/address/${listing.seller}?cluster=devnet`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-purple-300 hover:text-purple-200 flex items-center gap-1"
                 >
-                  {listing.art.minted_nft_address.slice(0, 4)}...{listing.art.minted_nft_address.slice(-4)}
+                  {listing.seller.slice(0, 4)}...{listing.seller.slice(-4)}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-gray-800">
-                <span className="text-sm text-gray-400">Creator</span>
+                <span className="text-sm text-gray-400">Mint address</span>
                 <a
-                  href={`https://explorer.solana.com/address/${listing.art.creator_wallet}?cluster=devnet`}
+                  href={`https://explorer.solana.com/address/${listing.mintAddress}?cluster=devnet`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-purple-300 hover:text-purple-200 flex items-center gap-1"
                 >
-                  {listing.art.creator_wallet.slice(0, 4)}...{listing.art.creator_wallet.slice(-4)}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-gray-800">
-                <span className="text-sm text-gray-400">Current Owner</span>
-                <a
-                  href={`https://explorer.solana.com/address/${listing.art.creator_wallet}?cluster=devnet`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-purple-300 hover:text-purple-200 flex items-center gap-1"
-                >
-                  {listing.art.owner_wallet.slice(0, 4)}...{listing.art.owner_wallet.slice(-4)}
+                  {listing.mintAddress.slice(0, 4)}...{listing.mintAddress.slice(-4)}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
             </div>
 
-            {!isOwner && (
+            {!isOwner && isLoggedIn && (
               <div className="flex gap-4 sticky bottom-0 bg-gray-900/95 py-4 border-t border-gray-800">
                 <Button
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300"
@@ -169,28 +166,34 @@ function ListingDetailsModal({ listing, onClose, onPurchase, isOwner }: ListingD
       </Dialog>
     </Dialog>
   );
-}
+};
 
 export default function MarketplacePage() {
+  const wallet = useWallet();
   const [viewMode, setViewMode] = useState<'my' | 'all'>('all');
   const [sortBy, setSortBy] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddListingOpen, setIsAddListingOpen] = useState(false);
-  const { data: allListings = { data: [], hasMore: false, total: 0 }, isLoading: isLoadingAll } = useGetListingsQuery({});
+  const { data: allListings = { data: [], hasMore: false, total: 0 }, isLoading: isLoadingAll } = useGetAllListingsQuery({ 
+    publicKey: wallet.publicKey?.toString() 
+  });
   const { data: userArt = [] } = useGetUserArtQuery();
-  const [purchaseListing] = usePurchaseListingMutation();
+  const [purchaseListing] = useExecutePurchaseMutation();
   const [createListing] = useCreateListingMutation();
   const { isUserLoggedIn, user } = useAppSelector(state => state.appState);
-  const currentUserId = user?.id;
-  const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
-
+  const [selectedListing, setSelectedListing] = useState<AuctionHouseListing | null>(null);
+  const [purchasedNFT, setPurchasedNFT] = useState<{
+    title: string;
+    image_url: string;
+    price: number;
+  } | null>(null);
 
   // Get mintable art (unminted art owned by current user)
   const listableArt = userArt
     .filter(art => 
-      art.user_id === currentUserId && // Only user's own art
-      !art.is_minted && // Not minted yet
-      !allListings.data?.some(listing => listing.art.id === art.id) // Not listed
+      art.user_id === user?.id && // Only user's own art
+      art.minted_nft_address && // Must be minted
+      !allListings.data?.some(listing => listing.uri === art.image_url) // Not already listed
     )
     .map(art => ({
       id: art.id,
@@ -200,51 +203,69 @@ export default function MarketplacePage() {
       minted_nft_address: art.minted_nft_address
     }));
 
-  console.log('Listable art:', listableArt);
-
   // Get the appropriate listings based on view mode
-  const listings = viewMode === 'my' && currentUserId
-    ? (allListings.data || []).filter((listing: MarketplaceListing) => listing.user_id === currentUserId)
+  const listings = viewMode === 'my' && wallet.publicKey
+    ? (allListings.data || []).filter((listing: AuctionHouseListing) => 
+        listing.seller === wallet.publicKey?.toString()
+      )
     : (allListings.data || []);
 
-  console.log('Filtered listings:', listings);
-
   // Filter and sort listings
-  const filteredListings = (listings || []).filter((listing: MarketplaceListing) => {
+  const filteredListings = (listings || [])
+    .filter((listing: AuctionHouseListing) => {
       if (searchQuery) {
-        return listing.art.title.toLowerCase().includes(searchQuery.toLowerCase());
+        return listing.name.toLowerCase().includes(searchQuery.toLowerCase());
       }
       return true;
     })
-    .sort((a, b) => {
+    .sort((a: AuctionHouseListing, b: AuctionHouseListing) => {
       if (sortBy === 'recent') {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       } else if (sortBy === 'price-low') {
-        return a.price - b.price;
+        return Number(a.price) - Number(b.price);
       } else {
-        return b.price - a.price;
+        return Number(b.price) - Number(a.price);
       }
     });
 
-  const handlePurchase = async (listingId: number) => {
-    try {
+  const handlePurchase = async (listing: AuctionHouseListing) => {
+    if (!wallet.publicKey || !wallet.connected) {
       toast({
-        title: 'Processing Purchase',
-        description: 'Please wait while we process your purchase...',
-        variant: 'loading'
+        title: 'Error',
+        description: 'Please connect your wallet first',
+        variant: 'destructive',
       });
-      await purchaseListing(listingId).unwrap();
+      return;
+    }
+
+    try {
+      const result = await purchaseListing({
+        nftMint: listing.mintAddress,
+        price: Number(listing.price),
+        sellerTradeState: listing.tradeState,
+        wallet
+      }).unwrap();
+
+      if (result && 'error' in result) {
+        throw new Error(result.error as string);
+      }
+
+      setPurchasedNFT({
+        title: listing.name,
+        image_url: listing.uri,
+        price: Number(listing.price)
+      });
+
       toast({
-        title: 'Purchase Complete',
-        description: 'You have successfully purchased this NFT!',
-        variant: 'default'
+        title: 'Success',
+        description: 'NFT purchased successfully!',
       });
     } catch (error) {
       console.error('Purchase error:', error);
       toast({
-        title: 'Purchase Failed',
-        description: 'Failed to complete purchase. Please try again.',
-        variant: 'destructive'
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to purchase NFT',
+        variant: 'destructive',
       });
     }
   };
@@ -260,29 +281,39 @@ export default function MarketplacePage() {
     }
 
     try {
-      toast({
-        title: 'Creating Listing',
-        description: 'Please wait while we create your listing...',
-        variant: 'loading'
+      // Find the art details from listableArt
+      const artToList = listableArt.find(art => art.id === artId);
+      if (!artToList || !artToList.minted_nft_address) {
+        throw new Error('NFT not found or not minted');
+      }
+
+      console.log('Creating listing with params:', {
+        nftMint: artToList.minted_nft_address,
+        price,
+        wallet
       });
 
-      await createListing({
-        artId,
-        price
+      const result = await createListing({
+        nftMint: artToList.minted_nft_address,
+        price,
+        wallet
       }).unwrap();
+
+      if (result && 'error' in result) {
+        throw new Error(result.error as string);
+      }
       
       setIsAddListingOpen(false);
       
       toast({
         title: 'Listing Created',
         description: 'Your NFT has been listed for sale!',
-        variant: 'default'
       });
     } catch (error) {
       console.error('Listing error:', error);
       toast({
         title: 'Listing Failed',
-        description: 'Failed to create listing. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to create listing',
         variant: 'destructive'
       });
     }
@@ -423,56 +454,56 @@ export default function MarketplacePage() {
               </div>
             ) : (
               filteredListings.map((listing) => {
-                  const isListingOwner = currentUserId === listing.user_id;
-                  return (
-                    <motion.div
-                      key={listing.id}
-                      variants={item}
-                      className="group relative rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer"
-                      onClick={() => setSelectedListing(listing as any)}
-                    >
-                      <div className="relative aspect-square">
-                        <Image
-                          src={listing.art.image_url}
-                          alt={listing.art.title}
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                        <div className="absolute top-2 right-2 flex items-center gap-1 bg-purple-500/20 px-2 py-1 rounded-lg backdrop-blur-sm">
-                          <Tag className="h-3 w-3 text-purple-300" />
-                          <span className="text-xs text-purple-300">{listing.price} SOL</span>
-                        </div>
+                const isListingOwner = wallet.publicKey?.toString() === listing.seller;
+                return (
+                  <motion.div
+                    key={`${listing.tradeState}-${listing.seller}`}
+                    variants={item}
+                    className="group relative rounded-xl overflow-hidden bg-gray-900/50 backdrop-blur-sm border border-gray-800 hover:border-purple-500/20 transition-all duration-300 cursor-pointer"
+                    onClick={() => setSelectedListing(listing)}
+                  >
+                    <div className="relative aspect-square">
+                      <Image
+                        src={listing.uri}
+                        alt={listing.name}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-purple-500/20 px-2 py-1 rounded-lg backdrop-blur-sm">
+                        <Tag className="h-3 w-3 text-purple-300" />
+                        <span className="text-xs text-purple-300">{listing.price} SOL</span>
                       </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-sm font-medium text-gray-100 mb-2">{listing.art.title}</h3>
-                          <div className="flex items-center justify-between">
-                            <div className="text-xs text-gray-400">
-                              Listed {format(new Date(listing.created_at), 'MMM d, yyyy')}
-                            </div>
-                            {!isListingOwner && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                className="h-7 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePurchase(listing.id);
-                                }}
-                              >
-                                <Sparkles className="h-3 w-3 mr-1" />
-                                Buy Now
-                              </Button>
-                            )}
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <h3 className="text-sm font-medium text-gray-100 mb-2">{listing.name}</h3>
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-gray-400">
+                            Listed {format(new Date(listing.createdAt), 'MMM d, yyyy')}
                           </div>
+                          {!isListingOwner && isUserLoggedIn && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-7 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePurchase(listing as AuctionHouseListing);
+                              }}
+                            >
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Buy Now
+                            </Button>
+                          )}
                         </div>
                       </div>
-                    </motion.div>
-                  );
+                    </div>
+                  </motion.div>
+                );
               })
-                    )}
-                  </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -481,7 +512,8 @@ export default function MarketplacePage() {
         listing={selectedListing}
         onClose={() => setSelectedListing(null)}
         onPurchase={handlePurchase}
-        isOwner={selectedListing?.user_id === currentUserId}
+        isOwner={selectedListing?.seller === wallet.publicKey?.toString()}
+        isLoggedIn={isUserLoggedIn}
       />
 
       {/* NFT Listing Dialog */}
@@ -491,6 +523,13 @@ export default function MarketplacePage() {
         onList={handleCreateListing}
         nfts={listableArt}
         isLoading={isLoadingAll}
+      />
+
+      {/* Purchase Success Modal */}
+      <PurchaseSuccessModal
+        isOpen={!!purchasedNFT}
+        onClose={() => setPurchasedNFT(null)}
+        nftData={purchasedNFT}
       />
     </RootLayout>
   );

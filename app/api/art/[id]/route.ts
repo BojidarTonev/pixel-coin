@@ -2,6 +2,41 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getUserFromRequest } from '@/lib/auth';
 
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Query single art piece by ID
+    const { data: art, error } = await supabase
+      .from('art')
+      .select(`
+        *,
+        marketplace_listings (*)
+      `)
+      .eq('id', params.id)
+      .single();
+
+    if (error) throw error;
+
+    if (!art) {
+      return NextResponse.json(
+        { error: 'Art not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(art);
+
+  } catch (error) {
+    console.error('Error fetching art:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch art' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }

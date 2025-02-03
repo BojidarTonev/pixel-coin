@@ -12,7 +12,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const { art_id, price } = await request.json();
+    console.log('Creating listing...', request);
+    const { art_id, price, token_account } = await request.json();
+
 
     // Get the art piece to verify ownership and minting status
     const { data: art, error: fetchError } = await supabase
@@ -53,8 +55,10 @@ export async function POST(request: Request) {
         art_id: art_id,
         nft_address: art.minted_nft_address,
         price: price,
-        status: 'active'
+        status: 'active',
+        token_account: token_account
       }])
+
       .select()
       .single();
 

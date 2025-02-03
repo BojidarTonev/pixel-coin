@@ -11,7 +11,7 @@ import { ArtPiece } from "@/app/gallery/page";
 import { useMintNFTMutation } from "@/redux/services/nft.service";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useState } from "react";
-import { useGetListingsQuery } from "@/redux/services/nft.service";
+import { useGetAllListingsQuery } from "@/redux/services/auctionHouse.service";
 
 interface ArtDetailsModalProps {
   art: ArtPiece | null;
@@ -20,15 +20,15 @@ interface ArtDetailsModalProps {
 
 export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
   const router = useRouter();
+  const wallet = useWallet();
   const { user } = useAppSelector(state => state.appState);
   const currentUserId = user?.id;
   const isOwner = currentUserId && art?.user_id === currentUserId;
   const [isMinting, setIsMinting] = useState(false);
   const [mintNFT] = useMintNFTMutation();
-  const wallet = useWallet();
   
   // Get listings to check if this NFT is already listed
-  const { data: listings = { data: [], hasMore: false, total: 0 } } = useGetListingsQuery({});
+  const { data: listings = { data: [], hasMore: false, total: 0 } } = useGetAllListingsQuery({publicKey: wallet.publicKey?.toString()});
   const isListed = art?.is_minted && listings.data.some((listing: any) => listing.nftAddress === art.minted_nft_address);
 
   if (!art) return null;
@@ -105,7 +105,7 @@ export function ArtDetailsModal({ art, onClose }: ArtDetailsModalProps) {
   const handleViewListing = () => {
     const listing = listings.data?.find((l: any) => l.nftAddress === art?.minted_nft_address);
     if (listing) {
-      router.push(`/marketplace/${listing.id}`);
+      // router.push(`/marketplace/${listing.id}`);
     }
   };
 

@@ -65,7 +65,8 @@ export const artApi = createApi({
       },
       forceRefetch({ currentArg, previousArg }) {
         return currentArg?.page !== previousArg?.page;
-      }
+      },
+      keepUnusedDataFor: 0,
     }),
     getUserArt: builder.query<Art[], void>({
       query: () => ({

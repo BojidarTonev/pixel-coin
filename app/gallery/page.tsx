@@ -20,9 +20,10 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAppSelector, type RootState } from '@/redux/store';
 import { toast } from '@/hooks/use-toast';
-import { useGetListingsQuery, useMintNFTMutation } from '@/redux/services/nft.service';
+import { useMintNFTMutation } from '@/redux/services/nft.service';
 import { useWallet } from "@solana/wallet-adapter-react";
 import { MintSuccessModal } from '@/components/mint-success-modal';
+import { useGetAllListingsQuery } from '@/redux/services/auctionHouse.service';
 
 export type ArtPiece = Art;
 
@@ -49,6 +50,7 @@ const item = {
 const ITEMS_PER_PAGE = 12;
 
 export default function GalleryPage() {
+  const wallet = useWallet();
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'my' | 'all'>('all');
   const [sortBy, setSortBy] = useState('recent');
@@ -78,7 +80,7 @@ export default function GalleryPage() {
     limit: ITEMS_PER_PAGE 
   });
 
-  const { data: listingsData = { data: [], hasMore: false, total: 0 } } = useGetListingsQuery({});
+  const { data: listingsData = { data: [], hasMore: false, total: 0 } } = useGetAllListingsQuery({publicKey: wallet.publicKey?.toString()});
 
   // Intersection Observer for infinite scrolling
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function GalleryPage() {
 
   // Check if art piece is listed in marketplace
   const isArtListed = (artId: number) => {
-    return listingsData.data?.some(listing => listing.art.id === artId && listing.status === 'active');
+    return listingsData.data?.some(listing => listing.uri === artPieces.find(art => art.id === artId)?.image_url);
   };
 
   // Handle view listing click
@@ -136,7 +138,6 @@ export default function GalleryPage() {
   };
 
   const [mintNFT] = useMintNFTMutation();
-  const wallet = useWallet();
 
   const handleMintNFT = async (e: React.MouseEvent, piece: ArtPiece) => {
     e.stopPropagation();

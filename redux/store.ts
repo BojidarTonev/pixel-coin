@@ -6,6 +6,7 @@ import { creditsApi } from './services/credits.service';
 import { nftApi } from './services/nft.service';
 import { appStateSlice } from './features/app-state-slice';
 import { userApi } from './services/user.service';
+import { auctionHouseApi } from './services/auctionHouse.service';
 
 interface User {
   id: number;
@@ -34,7 +35,8 @@ const rootReducer = combineReducers({
   [artApi.reducerPath]: artApi.reducer,
   [creditsApi.reducerPath]: creditsApi.reducer,
   [nftApi.reducerPath]: nftApi.reducer,
-  [userApi.reducerPath]: userApi.reducer
+  [userApi.reducerPath]: userApi.reducer,
+  [auctionHouseApi.reducerPath]: auctionHouseApi.reducer
 });
 
 export const store = configureStore({
@@ -44,7 +46,8 @@ export const store = configureStore({
       artApi.middleware,
       creditsApi.middleware,
       nftApi.middleware,
-      userApi.middleware
+      userApi.middleware,
+      auctionHouseApi.middleware
     ]),
 });
 
